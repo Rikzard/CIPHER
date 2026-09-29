@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from typing import Any, Dict, List, Optional, Tuple
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic.json_schema import SkipJsonSchema
 
 
 class AnalysisInput(BaseModel):
@@ -14,6 +15,16 @@ class AnalysisInput(BaseModel):
     content: str = Field(..., description="Original untrusted text content to analyze")
     source_kind: str = Field(default="user", description="Source type: user, retrieval, tool, etc.")
     metadata: Dict[str, str] = Field(default_factory=dict, description="Optional request/source metadata")
+    original_content: SkipJsonSchema[str] = Field(default="", exclude=True, repr=False)
+
+    @model_validator(mode="before")
+    @classmethod
+    def retain_original_content(cls, value: Any) -> Any:
+        """Keep source text internally while preserving legacy trimmed content."""
+        if isinstance(value, dict) and "content" in value:
+            value = dict(value)
+            value["original_content"] = value["content"]
+        return value
 
     @field_validator("content", "source_kind")
     @classmethod
@@ -36,6 +47,14 @@ class NormalizedContent(BaseModel):
     normalization_signals: Dict[str, int] = Field(
         default_factory=dict,
         description="Counts of Unicode or control-character normalization signals",
+    )
+    normalization_events: List[Dict[str, str | int]] = Field(
+        default_factory=list,
+        description="Bounded source-positioned records of transformations and suspicious characters",
+    )
+    canonical_source_spans: List[Tuple[int, int]] = Field(
+        default_factory=list,
+        description="Half-open Python Unicode codepoint span for each canonical character",
     )
     source_offsets: Optional[Dict[str, int]] = Field(default=None, description="Optional offset mapping back to source")
 
