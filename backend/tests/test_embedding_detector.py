@@ -58,6 +58,12 @@ class TestEmbeddingDetector(unittest.TestCase):
         self.store = LocalFaissVectorStore.from_embeddings(
             self.examples,
             np.asarray([[1.0, 0.0], [1.0, 0.0]], dtype=np.float32),
+            provenance={
+                "dataset_version": "test-1",
+                "dataset_sha256": "0" * 64,
+                "embedding_model_name": self.config.model_name,
+                "embedding_model_path": self.config.model_path_descriptor,
+            },
         )
 
     def tearDown(self) -> None:

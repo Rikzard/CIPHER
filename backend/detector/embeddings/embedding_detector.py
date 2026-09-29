@@ -9,9 +9,7 @@ from typing import Any, Protocol
 
 from backend.detector.base import BaseDetector
 from backend.models.contracts import DetectorResult, NormalizedContent
-from backend.normalization.normalizer import normalize_input
 from backend.detector.embeddings.vector_store import (
-    InjectionExample,
     LocalFaissVectorStore,
     VectorStoreError,
 )
@@ -32,6 +30,8 @@ class EmbeddingConfig:
     dataset_path: Path
     similarity_threshold: float = 0.65
     top_k: int = 3
+    model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
+    dataset_manifest_path: Path | None = None
 
     @classmethod
     def from_env(cls) -> "EmbeddingConfig":
@@ -42,6 +42,10 @@ class EmbeddingConfig:
             dataset_path=Path(os.getenv("CIPHER_EMBEDDING_DATASET_PATH", root / "data" / "embedding_examples.jsonl")),
             similarity_threshold=float(os.getenv("CIPHER_EMBEDDING_THRESHOLD", "0.65")),
             top_k=int(os.getenv("CIPHER_EMBEDDING_TOP_K", "3")),
+            model_name=os.getenv("CIPHER_EMBEDDING_MODEL_NAME", "sentence-transformers/all-MiniLM-L6-v2"),
+            dataset_manifest_path=Path(os.environ["CIPHER_EMBEDDING_MANIFEST_PATH"])
+            if os.getenv("CIPHER_EMBEDDING_MANIFEST_PATH")
+            else None,
         )
 
     def __post_init__(self) -> None:
@@ -49,6 +53,24 @@ class EmbeddingConfig:
             raise ValueError("similarity_threshold must be between 0 and 1")
         if self.top_k <= 0:
             raise ValueError("top_k must be positive")
+        if not self.model_name.strip():
+            raise ValueError("model_name must not be empty")
+
+    @property
+    def model_path_descriptor(self) -> str:
+        """Stable, repository-relative path when the configured model is in-repo."""
+        repository_root = Path(__file__).resolve().parents[3]
+        candidate = self.model_path.expanduser()
+        if not candidate.is_absolute():
+            return candidate.as_posix()
+        try:
+            return candidate.resolve().relative_to(repository_root.resolve()).as_posix()
+        except ValueError:
+            return candidate.resolve().as_posix()
+
+    @property
+    def manifest_path(self) -> Path:
+        return self.dataset_manifest_path or self.dataset_path.with_suffix(".manifest.json")
 
 
 class EmbeddingDetector(BaseDetector):
@@ -86,6 +108,10 @@ class EmbeddingDetector(BaseDetector):
                 probe = self._encode(["dimension check"])
                 if probe.shape[1] != self._vector_store.dimension:
                     self._load_error = "model_index_dimension_mismatch"
+                elif self._vector_store.metadata["embedding_model_name"] != self.config.model_name:
+                    self._load_error = "model_index_name_mismatch"
+                elif self._vector_store.metadata["embedding_model_path"] != self.config.model_path_descriptor:
+                    self._load_error = "model_index_path_mismatch"
             except Exception as exc:
                 self._load_error = f"model_validation_failed: {type(exc).__name__}"
 
@@ -173,10 +199,12 @@ class EmbeddingDetector(BaseDetector):
             findings=findings,
             metadata={
                 "status": "evaluated",
-                "model": "all-MiniLM-L6-v2",
+                "model": self.config.model_name,
                 "similarity_metric": "cosine",
                 "similarity_threshold": self.config.similarity_threshold,
                 "threshold_calibrated": False,
+                "dataset_version": self._vector_store.metadata["dataset_version"],
+                "embedding_dimension": self._vector_store.dimension,
                 "nearest_examples": matches,
             },
         )
@@ -188,16 +216,9 @@ def build_local_index(
     encoder: TextEncoder | None = None,
 ) -> Path:
     """Build and save the local FAISS index from the versioned JSONL dataset."""
-    selected = config or EmbeddingConfig.from_env()
-    model = encoder or EmbeddingDetector._load_encoder(selected.model_path)
-    examples = LocalFaissVectorStore.load_dataset(selected.dataset_path)
-    # Query-time content is already canonicalized; apply the same transform to
-    # reference examples, including obfuscated examples with invisible chars.
-    canonical_examples = [normalize_input(example.text).canonical_text for example in examples]
-    vectors = _encode_texts(model, canonical_examples)
-    store = LocalFaissVectorStore.from_embeddings(examples, vectors)
-    store.save(selected.index_path)
-    return selected.index_path
+    from backend.detector.embeddings.provision import build_index
+
+    return build_index(config, encoder=encoder)
 
 
 def _encode_texts(encoder: TextEncoder, texts: list[str]) -> Any:
