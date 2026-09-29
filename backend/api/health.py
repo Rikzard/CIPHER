@@ -1,6 +1,6 @@
 """Health route, separate from future analysis endpoints."""
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.config import Settings
 from backend.models.health import HealthResponse
@@ -10,7 +10,10 @@ router = APIRouter()
 
 def get_settings(request: Request) -> Settings:
     """Read the settings instance attached by the application factory."""
-    return request.app.state.settings
+    settings = getattr(request.app.state, "settings", None)
+    if settings is None:
+        raise HTTPException(status_code=500, detail="Application settings not initialized")
+    return settings
 
 
 @router.get("/health", response_model=HealthResponse, tags=["health"])

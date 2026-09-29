@@ -1,1 +1,5 @@
-"""Reserved boundary for future detection components; no detection yet."""
+"""Detector package root."""
+
+from backend.detector.base import BaseDetector
+
+__all__ = ["BaseDetector"]
