@@ -1,0 +1,3 @@
+# Optional dependencies for CIPHER's standalone semantic detector.
+sentence-transformers
+faiss-cpu

@@ -1,11 +1,16 @@
-"""Embedding similarity detector package boundary (deferred; unimplemented)."""
+"""Local semantic similarity detector based on Sentence Transformers and FAISS."""
 
+from backend.detector.embeddings.embedding_detector import EmbeddingConfig, EmbeddingDetector
+from backend.detector.embeddings.vector_store import InjectionExample, LocalFaissVectorStore
 from backend.detector.base import BaseDetector
 from backend.models.contracts import DetectorResult, NormalizedContent
 
 
 class EmbeddingDetectorPlaceholder(BaseDetector):
-    """Placeholder embedding detector returning available=False until implemented in Phase 5."""
+    """Backward-compatible placeholder retained for the existing orchestrator.
+
+    The new semantic detector is intentionally not wired into ApplicationService.
+    """
 
     @property
     def name(self) -> str:
@@ -25,5 +30,7 @@ class EmbeddingDetectorPlaceholder(BaseDetector):
             metadata={"status": "unimplemented_phase_5"},
         )
 
-
-__all__ = ["EmbeddingDetectorPlaceholder"]
+__all__ = [
+    "EmbeddingConfig", "EmbeddingDetector", "EmbeddingDetectorPlaceholder",
+    "InjectionExample", "LocalFaissVectorStore",
+]
