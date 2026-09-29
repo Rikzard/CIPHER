@@ -16,6 +16,7 @@ from backend.normalization.normalizer import NormalizationInputTooLarge
 
 router = APIRouter()
 _RULE_CATEGORY = re.compile(r"^\[RULE-\d+\]\s+(.+?)\s+matched$")
+_SEMANTIC_CATEGORY = re.compile(r"^\[SEM-\d+\]\s+Similarity to ([a-z0-9_]+) example\b")
 
 
 class AnalyzeRequest(BaseModel):
@@ -27,7 +28,7 @@ class AnalyzeRequest(BaseModel):
 
 
 class AnalyzeResponse(BaseModel):
-    """Structured result from the current rule-based MVP pipeline."""
+    """Structured result from the current rule and embedding detector pipeline."""
 
     analysis_id: UUID
     verdict: Literal["allow", "flag", "block"]
@@ -79,13 +80,14 @@ def analyze(
         for result in workflow.detector_results
     ]
     findings = [finding for result in safe_detector_results for finding in result.findings]
-    categories = sorted(
-        {
-            match.group(1)
-            for finding in findings
-            if (match := _RULE_CATEGORY.match(finding)) is not None
-        }
-    )
+    categories: set[str] = set()
+    for finding in findings:
+        rule_match = _RULE_CATEGORY.match(finding)
+        semantic_match = _SEMANTIC_CATEGORY.match(finding)
+        if rule_match is not None:
+            categories.add(rule_match.group(1))
+        elif semantic_match is not None:
+            categories.add(semantic_match.group(1))
 
     return AnalyzeResponse(
         analysis_id=uuid4(),
@@ -94,6 +96,6 @@ def analyze(
         risk_band=workflow.risk_assessment.risk_band,
         detector_results=safe_detector_results,
         findings=findings,
-        attack_categories=categories,
+        attack_categories=sorted(categories),
         processing_latency_ms=latency_ms,
     )

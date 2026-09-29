@@ -6,8 +6,7 @@ from typing import List, Sequence
 from pydantic import BaseModel, ConfigDict
 
 from backend.detector.base import BaseDetector
-from backend.detector.classifier import MLClassifierPlaceholder
-from backend.detector.embeddings import EmbeddingDetectorPlaceholder
+from backend.detector.embeddings import EmbeddingDetector
 from backend.detector.rules import RuleDetector
 from backend.models.contracts import (
     AnalysisInput,
@@ -42,8 +41,7 @@ class ApplicationService:
         else:
             self._detectors = [
                 RuleDetector(),
-                EmbeddingDetectorPlaceholder(),
-                MLClassifierPlaceholder(),
+                EmbeddingDetector(),
             ]
 
     def analyze_prompt(self, input_data: AnalysisInput) -> AnalysisWorkflowResult:

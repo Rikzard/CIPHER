@@ -10,7 +10,7 @@ from backend.config import Settings
 class TestHealth(unittest.TestCase):
     def test_health_returns_service_status(self) -> None:
         settings = Settings(app_name="CIPHER Test", app_version="9.8.7", environment="test")
-        client = TestClient(create_app(settings))
+        client = TestClient(create_app(settings, detectors=[]))
 
         response = client.get("/health")
 
