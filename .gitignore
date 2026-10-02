@@ -6,3 +6,5 @@ venv/
 models/
 data/embeddings/*.faiss
 data/embeddings/*.faiss.json
+
+node_modules/
