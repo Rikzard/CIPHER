@@ -1,6 +1,6 @@
-# Threshold Calibration — Review Draft
+# CIPHER Embedding Threshold Calibration
 
-**Status:** Calibration-only candidate; held-out evaluation has not been run.
+**Status:** Calibration candidate frozen before held-out evaluation.
 
 ## Dataset and model
 
@@ -85,7 +85,7 @@ The real locally provisioned Sentence Transformer and FAISS index were used. Eac
 - **Lower-FPR alternative:** `0.55521929` (FPR 0.000, recall 0.429); strictly lower FPR than primary.
 - **Higher-recall alternative:** `0.38085578` (recall 1.000, FPR 0.286); no candidate improved recall over primary; this is the maximum-recall point.
 
-Primary selection criterion: maximum F1 on calibration data. If exact ties occur, the highest tied threshold is selected as the displayed candidate; tied and near-tied alternatives are shown because differences are not meaningful at this sample size. This is a candidate only. **The production threshold remains 0.65.**
+Primary selection criterion: maximum F1 on calibration data. Exact maximum-F1 thresholds were `0.38085578` and `0.39288822`; the pre-declared tie-break selects the highest, **`0.39288822`**, which is now frozen for the held-out evaluation. Tied and near-tied alternatives are shown because differences are not meaningful at this sample size. **The production threshold remains 0.65 and was not changed.**
 
 ## Limitations
 
@@ -93,4 +93,19 @@ The calibration set contains only 28 hand-authored project examples and is not r
 
 ## Held-Out Evaluation
 
-Not run. The candidate must be reviewed and frozen before the separate held-out dataset is evaluated exactly once. Held-out results must not be used to retune the candidate.
+The **frozen calibration candidate `0.39288822`** was evaluated exactly once on `data/evaluation/test.jsonl` using the same real local model and unchanged FAISS index. No threshold sweep or tuning was performed on held-out data, and the production threshold remains `0.65`.
+
+| Metric | Result |
+|---|---:|
+| TP | 9 |
+| TN | 7 |
+| FP | 3 |
+| FN | 1 |
+| Precision | 0.7500 |
+| Recall | 0.9000 |
+| F1 | 0.8182 |
+| Accuracy | 0.8000 |
+| False positive rate | 0.3000 |
+| False negative rate | 0.1000 |
+
+Held-out category counts are small; these results are descriptive and were not used to alter the candidate. Per-example evidence is in `data/evaluation/reports/heldout_threshold_result.json`.

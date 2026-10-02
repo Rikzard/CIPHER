@@ -1,4 +1,5 @@
 {
+  "candidate_frozen": true,
   "dataset": "data/evaluation/calibration.jsonl",
   "dataset_count": 28,
   "dataset_label_counts": {
@@ -1971,10 +1972,13 @@
   "heldout_evaluated": false,
   "model": "sentence-transformers/all-MiniLM-L6-v2",
   "model_path": "models/all-MiniLM-L6-v2",
+  "production_threshold": 0.65,
+  "production_threshold_changed": false,
   "reference_count": 16,
   "reference_index": "D:/CIPHER_2/data/embeddings/injection_examples.faiss",
+  "selected_candidate_threshold": 0.39288821816444397,
   "similarity_metric": "cosine similarity from FAISS IndexFlatIP over L2-normalized vectors",
-  "status": "calibration_candidate_staged",
+  "status": "calibration_candidate_frozen",
   "summary": {
     "current_threshold": 0.65,
     "f1_tied_thresholds": [
@@ -3155,5 +3159,6 @@
       "tn": 14,
       "tp": 0
     }
-  ]
+  ],
+  "tie_break_rule": "Among exact maximum calibration F1 ties, select the highest threshold."
 }

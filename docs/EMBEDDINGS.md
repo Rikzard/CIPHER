@@ -1,6 +1,12 @@
 # Local embedding resources
 
-The semantic detector is an optional local component used alongside `RuleDetector`. It uses the pinned `sentence-transformers` and `faiss-cpu` dependencies in `backend/detector/embeddings/requirements.txt`, a local Sentence Transformer, the version-controlled JSONL dataset, and a generated local FAISS index. It does not download or rebuild resources during API requests. The current model is `sentence-transformers/all-MiniLM-L6-v2`.
+The semantic detector is an optional local component used alongside `RuleDetector`. Project-wide development dependencies are declared in the root `pyproject.toml` and locked in `uv.lock`; `backend/detector/embeddings/requirements.txt` remains available for standalone provisioning commands. The detector uses a local Sentence Transformer, the version-controlled JSONL dataset, and a generated local FAISS index. It does not download or rebuild resources during API requests. The current model is `sentence-transformers/all-MiniLM-L6-v2`.
+
+Run the backend test suite with the canonical command from the repository root:
+
+```powershell
+uv run python -m unittest discover -s backend/tests -v
+```
 
 ## 1. Install/provision the model once
 

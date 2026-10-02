@@ -1,0 +1,24 @@
+{
+  "dataset_version": "0.1.0",
+  "purpose": "Initial domain-independent binary prompt-injection training scaffold; not a benchmark or production-ready corpus.",
+  "label_mapping": {
+    "benign": 0,
+    "prompt_injection": 1
+  },
+  "splits": {
+    "train.jsonl": {"count": 48, "benign": 24, "malicious": 24},
+    "validation.jsonl": {"count": 14, "benign": 7, "malicious": 7},
+    "test.jsonl": {"count": 14, "benign": 7, "malicious": 7}
+  },
+  "attack_categories": [
+    "instruction_override",
+    "system_prompt_extraction",
+    "role_manipulation",
+    "task_redirection",
+    "context_manipulation",
+    "delimiter_manipulation",
+    "obfuscation"
+  ],
+  "split_strategy": "Manually group examples by distinct source/template family; group_id values are disjoint across train, validation, and classifier test. The frozen data/evaluation datasets are not training inputs.",
+  "frozen_evaluation_separation": "Do not copy or train on data/evaluation/calibration.jsonl or data/evaluation/test.jsonl."
+}

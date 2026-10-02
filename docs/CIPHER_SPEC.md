@@ -2,7 +2,7 @@
 
 ## Scope and implementation status
 
-This document describes the repository as it is currently implemented. The Python/FastAPI backend has environment-backed settings, a health endpoint, and a direct-text analysis endpoint using a hybrid `RuleDetector` + `EmbeddingDetector` pipeline. ML classification and indirect scanning are not implemented.
+This document describes the repository as it is currently implemented. The Python/FastAPI backend has environment-backed settings, a health endpoint, and a direct-text analysis endpoint using a hybrid `RuleDetector` + `EmbeddingDetector` pipeline. A standalone ML classifier and isolated train/evaluation workflow exist, but the classifier is not integrated into `ApplicationService` or the API. Indirect scanning is not implemented.
 
 ## Purpose
 
@@ -40,7 +40,7 @@ The current runtime consists of:
 4. `backend/api/analysis.py`: `POST /analyze`, a thin adapter that validates the request, calls the app-scoped `ApplicationService`, and formats both detector results, its decision, and evidence into an API response.
 5. `backend/models/`: typed Pydantic models including the API request/response models and core contracts (`AnalysisInput`, `NormalizedContent`, `DetectorResult`, `RiskAssessment`, `Decision`, `PromptEnvelope`).
 6. `backend/normalization/`: canonical normalization interface (`normalize_input`).
-7. `backend/detector/`: `BaseDetector`, `RuleDetector`, and the standalone local `EmbeddingDetector`. The ML classifier remains a placeholder and is not selected.
+7. `backend/detector/`: `BaseDetector`, `RuleDetector`, the local `EmbeddingDetector`, and a standalone local-only `MLClassifierDetector`. The classifier is not selected by the application service.
 8. `backend/risk/`: risk score fusion engine (`fuse_risk`).
 9. `backend/policy/`: policy decision engine (`evaluate_decision`).
 10. `backend/prompting/`: instruction/data separation envelope builder (`build_prompt_envelope`).
@@ -56,12 +56,12 @@ The analysis endpoint configures the current hybrid detector pair, `RuleDetector
 | Normalization layer | Implemented (`backend/normalization/`) | Convert input to canonical analysis form (`NormalizedContent`) while preserving original text and source offsets. |
 | Rule detector | Implemented (`backend/detector/rules/`) | Apply deterministic configured terms and structural indicator patterns (`RuleDetector`). |
 | Semantic similarity detector | Implemented and run by `/analyze` when local files are available (`backend/detector/embeddings/`) | Embed normalized content, search local FAISS reference vectors, and return similarity plus nearest-example IDs/categories. If unavailable, return `available: false`, `score: null`; never imply a successful zero score. |
-| ML classifier | Not used by the API MVP (`backend/detector/classifier/`) | Deferred to Phase 6. Placeholder exists; no model inference occurs. |
+| ML classifier | Implemented as an independently callable detector; not used by the API MVP (`backend/detector/classifier/`) | Binary DistilBERT inference and offline training workflow are available behind optional dependencies. No trained artifact is bundled; probabilities are uncalibrated; see [ML_CLASSIFIER.md](ML_CLASSIFIER.md). |
 | Risk fusion engine | Implemented (`backend/risk/`) | Combine detector outputs into a `RiskAssessment` score and risk band while handling missing/unavailable detectors. |
 | Decision engine | Implemented (`backend/policy/`) | Apply policy thresholds to generate a `Decision` (`allow`, `flag`, or `block`) with reason codes. |
 | Structured prompt/data separation | Implemented (`backend/prompting/`) | Represent trusted instructions and untrusted data in typed distinct envelope fields (`PromptEnvelope`). |
 
-The FastAPI app configures its app-scoped analysis service with `RuleDetector` followed by `EmbeddingDetector`. `ApplicationService` runs both independently on the same `NormalizedContent`, then passes their `DetectorResult` values to the existing risk-fusion and decision components. The ML classifier is not run.
+The FastAPI app configures its app-scoped analysis service with `RuleDetector` followed by `EmbeddingDetector`. `ApplicationService` runs both independently on the same `NormalizedContent`, then passes their `DetectorResult` values to the existing risk-fusion and decision components. The ML classifier is not run. Its default local artifact path is `models/classifier/active/`; unavailable, malformed, incompatible, or checksum-invalid artifacts produce `available: false` and `score: null`. It does not download a model at inference time and has no final decision authority.
 
 ## API endpoints
 
@@ -180,7 +180,7 @@ Unexpected exceptions handled by the application produce `500 Internal Server Er
 
 - The rule detector recognizes only its configured patterns; misses and false positives are possible.
 - Embedding results depend on local model/index availability; the small development reference corpus and initial similarity threshold are not calibrated for production.
-- The ML classifier is not implemented or run by the endpoint.
+- The standalone ML classifier is not integrated or run by the endpoint; its checkpoint must be locally trained, its probabilities are uncalibrated, and its development dataset is small and synthetic.
 - `/analyze` accepts direct text only; it does not scan URLs, retrieved documents, or tool outputs.
 - The health route reports process response only, not readiness of detectors or external services.
 - No persistence, authentication, tenant isolation, rate limiting, or model/tool integration is implemented.

@@ -4,7 +4,7 @@ CIPHER is a defense-in-depth prompt injection detection gateway for LLM applicat
 
 ## Project status
 
-The repository contains architecture documentation and a minimal Python/FastAPI backend skeleton. `GET /health` is implemented. Detection, analysis endpoints, frontend, and integrations have not been implemented.
+The repository contains the Python/FastAPI backend, `GET /health`, `POST /analyze`, a rule detector, and an optional local semantic embedding detector. The embedding similarity threshold is a project calibration candidate and is not yet the production setting. See `docs/CIPHER_SPEC.md` for implementation status and limitations.
 
 ## Design goals
 
@@ -21,7 +21,7 @@ The intended request flow is:
 
 1. A FastAPI adapter validates a request and assigns request metadata.
 2. Input normalization creates a canonical analysis representation while retaining the original content for safe downstream use and audit references.
-3. Independent detector interfaces produce evidence: deterministic rules, embedding similarity, and (in a later phase) an ML classifier.
+3. Independent detector interfaces produce evidence: deterministic rules and embedding similarity are used in `/analyze`; a standalone ML classifier is available for offline development but is not integrated into the API pipeline.
 4. Risk fusion combines calibrated detector outputs into an explainable assessment.
 5. A decision engine applies configured thresholds and policy to return `allow`, `flag`, or `block`.
 6. If the application proceeds, a structured prompt/data boundary carries trusted instructions separately from untrusted content.
@@ -42,11 +42,17 @@ These works inform design questions and evaluation scenarios; the architecture d
 
 ## Development
 
-The backend uses Python and FastAPI. An ASGI server such as Uvicorn can serve the app after runtime dependencies are installed. The `/health` test uses pytest and FastAPI's TestClient (which requires httpx). No detector or model dependencies are needed yet.
+The backend development environment is declared in the root `pyproject.toml` and locked in `uv.lock`. From the repository root, run the canonical backend test suite with:
+
+```powershell
+uv run python -m unittest discover -s backend/tests -v
+```
+
+`uv run` installs/synchronizes the locked backend dependencies and the default development group, including the FastAPI test client dependency. See [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) for the dependency layout and [docs/EMBEDDINGS.md](docs/EMBEDDINGS.md) for local model and FAISS setup.
 
 ## Scope boundaries
 
-- No ML model, trained weights, embedding service, frontend, or production scanner is included in this baseline.
+- The standalone ML classifier and its development workflow are implemented, but it is not integrated into `/analyze`; no trained checkpoint is committed. No frontend or indirect-content scanner is implemented.
 - Detection is advisory/policy input, not a proof that content is safe.
 - Integrating applications remain responsible for authorization, tool permissions, secret handling, and enforcing CIPHER decisions.
 

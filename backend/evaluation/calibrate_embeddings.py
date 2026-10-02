@@ -13,6 +13,7 @@ import csv
 import json
 import math
 from collections import Counter
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
@@ -150,6 +151,15 @@ def _read_calibration(path: Path) -> list[dict[str, str]]:
     return records
 
 
+def _read_heldout_once(path: Path) -> list[dict[str, str]]:
+    """Read and validate held-out examples without generating candidates."""
+    records = _read_calibration(path)
+    ids = [record["id"] for record in records]
+    if len(ids) != len(set(ids)):
+        raise ValueError("Held-out dataset contains duplicate IDs")
+    return records
+
+
 def collect_real_scores(
     records: list[Mapping[str, str]], detector: EmbeddingDetector
 ) -> list[dict[str, Any]]:
@@ -236,6 +246,99 @@ def write_calibration_outputs(
     return csv_path, json_path, report_path
 
 
+def run_heldout_evaluation() -> Path:
+    """Evaluate only the frozen candidate, once, and persist its result."""
+    root = Path(__file__).resolve().parents[2]
+    report_dir = root / "data/evaluation/reports"
+    output_path = report_dir / "heldout_threshold_result.json"
+    calibration_path = report_dir / "embedding_thresholds.json"
+    if output_path.exists():
+        raise FileExistsError(f"Held-out result already exists; refusing a second evaluation: {output_path}")
+    if not calibration_path.is_file():
+        raise FileNotFoundError("Frozen calibration result is missing; complete calibration first")
+    calibration = json.loads(calibration_path.read_text(encoding="utf-8"))
+    if calibration.get("status") != "calibration_candidate_frozen" or calibration.get("candidate_frozen") is not True:
+        raise ValueError("Calibration candidate is not recorded as frozen")
+    selected = float(calibration["selected_candidate_threshold"])
+    tied = [float(value) for value in calibration["summary"]["f1_tied_thresholds"]]
+    if not tied or selected != max(tied):
+        raise ValueError("Frozen candidate does not follow the pre-declared highest-threshold tie-break")
+
+    # The held-out split is opened only after verifying the frozen calibration
+    # report. The candidate is fixed and no threshold sweep runs on test data.
+    records = _read_heldout_once(root / "data/evaluation/test.jsonl")
+    config = replace(EmbeddingConfig.from_env(), similarity_threshold=selected)
+    detector = EmbeddingDetector(config)
+    scored = collect_real_scores(records, detector)
+    metrics = confusion_metrics(
+        (record["label"] for record in scored),
+        (record["similarity"] for record in scored),
+        selected,
+    )
+    category_metrics: dict[str, Any] = {}
+    for category in sorted({record["category"] for record in scored if record["label"] == "malicious"}):
+        category_records = [record for record in scored if record["label"] == "malicious" and record["category"] == category]
+        category_metrics[category] = {
+            "count": len(category_records),
+            "detected": sum(record["similarity"] >= selected for record in category_records),
+            "missed": sum(record["similarity"] < selected for record in category_records),
+        }
+    payload = {
+        "status": "heldout_evaluated_once",
+        "evaluation_type": "held-out evaluation",
+        "dataset": "data/evaluation/test.jsonl",
+        "dataset_count": len(scored),
+        "dataset_label_counts": dict(sorted(Counter(row["label"] for row in scored).items())),
+        "selected_frozen_threshold": selected,
+        "threshold_source": "data/evaluation/reports/embedding_thresholds.json",
+        "threshold_changed_after_calibration": False,
+        "model": config.model_name,
+        "reference_index": config.index_path.as_posix(),
+        "similarity_metric": "cosine similarity from FAISS IndexFlatIP over L2-normalized vectors",
+        "positive_rule": "cosine_similarity >= selected_frozen_threshold",
+        "metrics": _rounded_row(metrics),
+        "malicious_category_results": category_metrics,
+        "examples": [
+            {
+                **example,
+                "predicted_label": "malicious" if example["similarity"] >= selected else "benign",
+            }
+            for example in scored
+        ],
+        "threshold_tuned_on_heldout": False,
+    }
+    report_dir.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report_path = root / "docs/THRESHOLD_CALIBRATION.md"
+    report = report_path.read_text(encoding="utf-8")
+    heldout_section = f"""## Held-Out Evaluation
+
+The **frozen calibration candidate `{selected:.8f}`** was evaluated exactly once on `{payload['dataset']}` using the same real local model and unchanged FAISS index. No threshold sweep or tuning was performed on held-out data, and the production threshold remains `0.65`.
+
+| Metric | Result |
+|---|---:|
+| TP | {metrics['tp']} |
+| TN | {metrics['tn']} |
+| FP | {metrics['fp']} |
+| FN | {metrics['fn']} |
+| Precision | {metrics['precision']:.4f} |
+| Recall | {metrics['recall']:.4f} |
+| F1 | {metrics['f1']:.4f} |
+| Accuracy | {metrics['accuracy']:.4f} |
+| False positive rate | {metrics['false_positive_rate']:.4f} |
+| False negative rate | {metrics['false_negative_rate']:.4f} |
+
+Held-out category counts are small; these results are descriptive and were not used to alter the candidate. Per-example evidence is in `{output_path.relative_to(root).as_posix()}`.
+"""
+    report = report.replace(
+        "## Held-Out Evaluation\n\nPending: the separate held-out dataset will be evaluated once using the frozen threshold `0.39288822`. Its results must not be used to retune the candidate.",
+        heldout_section.rstrip(),
+    )
+    report_path.write_text(report, encoding="utf-8")
+    return output_path
+
+
 def _render_report(payload: Mapping[str, Any]) -> str:
     summary = payload["summary"]
     assert isinstance(summary, Mapping)
@@ -305,7 +408,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, default=Path("data/evaluation/reports"))
     parser.add_argument("--staging", action="store_true", help="write review-draft names; recommended before candidate approval")
+    parser.add_argument("--heldout", action="store_true", help="run the one-time held-out evaluation from the frozen report")
     args = parser.parse_args(argv)
+    if args.heldout:
+        print(run_heldout_evaluation())
+        return 0
     paths = run_calibration(args.output_dir, staging=args.staging)
     for path in paths:
         print(path)
