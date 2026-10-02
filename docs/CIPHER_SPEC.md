@@ -192,3 +192,7 @@ Unexpected exceptions handled by the application produce `500 Internal Server Er
 Indirect injection scanning is a future design boundary, not current behavior. The documented direction is to inspect each retrieved document, tool result, or other external content item independently before an agent uses it, retain provenance/source metadata, and return detector evidence to the integrating application's policy flow. The future scanner should reuse the same detector interfaces as direct input analysis rather than silently trusting externally sourced text.
 
 The scan point (at ingestion, retrieval time, or synchronously before use), cache/freshness rules, failure behavior, and enforcement policy have not been selected or implemented. Even with scanning, the host application must separately authorize tool calls and data access and keep untrusted content distinct from trusted instructions.
+
+## Evaluation data
+
+Labeled evaluation data is maintained separately under `data/evaluation/` in `calibration.jsonl` and `test.jsonl`. The balanced calibration set is for threshold analysis; the separate held-out set must not be used to select the threshold. Both contain benign hard negatives as well as malicious examples. A validator uses the production normalizer to check schema and raw/canonical leakage against each other and the FAISS reference corpus. See [EVALUATION.md](EVALUATION.md). These small hand-authored fixtures are project evaluation data, not representative of all real-world inputs. No threshold calibration has yet been performed.

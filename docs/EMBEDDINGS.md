@@ -67,3 +67,13 @@ Provisioning metadata is deterministic JSON containing:
 Generated resources are excluded by the repository `.gitignore`: the local `models/` directory, `data/embeddings/*.faiss`, and its `*.faiss.json` metadata sidecar. Do not commit model weights, generated FAISS indexes, or their metadata. Commit intentional changes to the dataset and its manifest.
 
 The current similarity threshold remains uncalibrated. Provisioning verifies consistency and queryability; it does not establish detection quality or calibrate a decision threshold. Threshold evaluation remains part of the evaluation phase.
+
+## Labeled evaluation data
+
+Threshold evaluation uses the separate project datasets under `data/evaluation/`, not the malicious-only FAISS reference corpus. `calibration.jsonl` includes benign hard negatives and malicious examples for score analysis; `test.jsonl` is held out and must not be used to choose a threshold. Validate schema and exact/canonical separation (using CIPHER's normalizer) from the repository root with:
+
+```powershell
+uv run --offline --with-requirements backend/detector/embeddings/requirements.txt -- python -m backend.evaluation.datasets
+```
+
+The fixtures are small and hand-authored, not representative of all real-world prompt injections. The threshold remains uncalibrated; see [EVALUATION.md](EVALUATION.md) for the planned Step 13C analysis and limitations.

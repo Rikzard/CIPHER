@@ -1,0 +1,24 @@
+{
+  "dataset_version": "1.0.0",
+  "calibration_count": 28,
+  "test_count": 20,
+  "benign_count": 24,
+  "malicious_count": 24,
+  "malicious_category_counts": {
+    "context_manipulation": 6,
+    "delimiter_manipulation": 3,
+    "instruction_override": 4,
+    "obfuscation": 2,
+    "role_manipulation": 3,
+    "system_prompt_extraction": 3,
+    "task_redirection": 3
+  },
+  "creation_purpose": "Project evaluation data for embedding similarity threshold analysis and a separate held-out assessment; not a representative sample of real-world attacks.",
+  "reference_corpus_separation_rules": [
+    "Do not include exact raw-text duplicates of the FAISS reference corpus.",
+    "Do not include duplicates after CIPHER normalization.",
+    "Calibration and test IDs must be disjoint.",
+    "Calibration and test texts must be distinct both raw and after CIPHER normalization.",
+    "Do not use the held-out test dataset to select or tune a threshold."
+  ]
+}
