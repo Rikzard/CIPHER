@@ -1,15 +1,4 @@
 {
-  "dataset_version": "0.1.0",
-  "purpose": "Initial domain-independent binary prompt-injection training scaffold; not a benchmark or production-ready corpus.",
-  "label_mapping": {
-    "benign": 0,
-    "prompt_injection": 1
-  },
-  "splits": {
-    "train.jsonl": {"count": 48, "benign": 24, "malicious": 24},
-    "validation.jsonl": {"count": 14, "benign": 7, "malicious": 7},
-    "test.jsonl": {"count": 14, "benign": 7, "malicious": 7}
-  },
   "attack_categories": [
     "instruction_override",
     "system_prompt_extraction",
@@ -19,6 +8,142 @@
     "delimiter_manipulation",
     "obfuscation"
   ],
-  "split_strategy": "Manually group examples by distinct source/template family; group_id values are disjoint across train, validation, and classifier test. The frozen data/evaluation datasets are not training inputs.",
-  "frozen_evaluation_separation": "Do not copy or train on data/evaluation/calibration.jsonl or data/evaluation/test.jsonl."
+  "dataset_sha256": "cefe9bad34b11a133b817c5f52d41ee96edd793d28f05911938d69c8506c96d4",
+  "dataset_version": "0.2.0",
+  "frozen_evaluation_separation": "The generator does not read data/evaluation. The validator checks exact and normalized text only; frozen labels are never used by classifier training.",
+  "generation": {
+    "deterministic": true,
+    "generator_version": "0.2.0",
+    "seed": null
+  },
+  "group_count": 138,
+  "hard_negative_terms": [
+    "prompt",
+    "system",
+    "instruction",
+    "ignore",
+    "override",
+    "administrator",
+    "security"
+  ],
+  "label_mapping": {
+    "benign": 0,
+    "prompt_injection": 1
+  },
+  "purpose": "Synthetic generic binary prompt-injection classifier dataset; development and research scaffold, not a validated benchmark.",
+  "record_count": 1960,
+  "source_metadata": {
+    "external_sources": [],
+    "generator": "backend.training.generate_classifier_data",
+    "method": "Deterministic, hand-authored compositional generation with fixed phrase banks and no external source data.",
+    "source_families": "Each group/template family is assigned wholly to one split; family identifiers are disjoint across train, validation, and test."
+  },
+  "split_sha256": {
+    "test.jsonl": "a3e32aa7812d8d645f45e4ff0860a56865b1fe8dcac2939db2c48dfcdef9a45d",
+    "train.jsonl": "d91ac894688e3eee4c79d3d593243e7d045c639e0df00550c3c61d3b3633773b",
+    "validation.jsonl": "646642701adcbf8fc07fdd9b26e1777bead68586701c883d5d5e6cc94ab39f1c"
+  },
+  "split_strategy": "Explicit, non-random family allocation; directive and benign family slices differ by split. No family is shared across splits.",
+  "splits": {
+    "test.jsonl": {
+      "attack_categories": {
+        "context_manipulation": 20,
+        "delimiter_manipulation": 20,
+        "instruction_override": 20,
+        "obfuscation": 20,
+        "role_manipulation": 20,
+        "system_prompt_extraction": 20,
+        "task_redirection": 20
+      },
+      "count": 280,
+      "group_count": 34,
+      "hard_negative_count": 92,
+      "hr_document_count": 157,
+      "labels": {
+        "benign": 140,
+        "malicious": 140
+      },
+      "source_kinds": {
+        "candidate_document": 150,
+        "direct_question": 21,
+        "hr_document": 7,
+        "technical_document": 102
+      }
+    },
+    "train.jsonl": {
+      "attack_categories": {
+        "context_manipulation": 100,
+        "delimiter_manipulation": 100,
+        "instruction_override": 100,
+        "obfuscation": 100,
+        "role_manipulation": 100,
+        "system_prompt_extraction": 100,
+        "task_redirection": 100
+      },
+      "count": 1400,
+      "group_count": 70,
+      "hard_negative_count": 506,
+      "hr_document_count": 840,
+      "labels": {
+        "benign": 700,
+        "malicious": 700
+      },
+      "source_kinds": {
+        "candidate_document": 820,
+        "direct_question": 60,
+        "hr_document": 20,
+        "technical_document": 500
+      }
+    },
+    "validation.jsonl": {
+      "attack_categories": {
+        "context_manipulation": 20,
+        "delimiter_manipulation": 20,
+        "instruction_override": 20,
+        "obfuscation": 20,
+        "role_manipulation": 20,
+        "system_prompt_extraction": 20,
+        "task_redirection": 20
+      },
+      "count": 280,
+      "group_count": 34,
+      "hard_negative_count": 97,
+      "hr_document_count": 157,
+      "labels": {
+        "benign": 140,
+        "malicious": 140
+      },
+      "source_kinds": {
+        "candidate_document": 150,
+        "direct_question": 21,
+        "hr_document": 7,
+        "technical_document": 102
+      }
+    }
+  },
+  "totals": {
+    "attack_categories": {
+      "context_manipulation": 140,
+      "delimiter_manipulation": 140,
+      "instruction_override": 140,
+      "obfuscation": 140,
+      "role_manipulation": 140,
+      "system_prompt_extraction": 140,
+      "task_redirection": 140
+    },
+    "count": 1960,
+    "group_count": 138,
+    "hard_negative_count": 695,
+    "hr_document_count": 1154,
+    "labels": {
+      "benign": 980,
+      "malicious": 980
+    },
+    "source_kinds": {
+      "candidate_document": 1120,
+      "direct_question": 102,
+      "hr_document": 34,
+      "technical_document": 704
+    }
+  }
 }

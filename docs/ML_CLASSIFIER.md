@@ -5,7 +5,7 @@
 CIPHER has a standalone binary text classifier implementation under
 `backend/detector/classifier/`. It is not selected by `ApplicationService` or
 `POST /analyze`. No checkpoint is committed or trained by default, and the
-versioned synthetic dataset is only a workflow scaffold. It provides no
+versioned synthetic dataset is a workflow and research scaffold. It provides no
 quality or security guarantee.
 
 The detector implements the existing `BaseDetector` contract. It accepts
@@ -40,12 +40,20 @@ deterministic but can be sensitive to a single problematic chunk.
 
 ## Data and separation
 
-`data/classifier/` contains JSONL train, validation, and held-out classifier
-test splits plus a manifest. Each record has `id`, `group_id`, `text`, binary
-`label`, optional `attack_category`, and `source_kind`. The validation command
-checks schema, label/category consistency, duplicate and normalized-text
-leakage, group/template split separation, manifest counts, and exact/normalized
-overlap with the frozen evaluation text.
+`data/classifier/` contains 1,400 training, 280 validation, and 280 held-out
+classifier-test records plus a manifest. Each split is balanced 50/50. Each
+record has `id`, `group_id`, `source_family`, `template_family`, `text`, binary
+`label`, optional `attack_category`, and `source_kind`. The records are
+deterministic synthetic compositions from hand-authored phrase banks; no
+external dataset or source license is claimed. The generator is
+`backend.training.generate_classifier_data`.
+
+The validator checks schema, label/category consistency, balanced classes,
+coverage of all seven categories, hard-negative and candidate-document
+coverage, group/template separation, exact/canonical text overlap across
+splits and with frozen evaluation text, manifest distributions and SHA-256
+values, label-in-text leakage, repeated long sentences, case-only duplicates,
+and near duplicates at token-set Jaccard similarity 0.85.
 
 Only `train.jsonl` contributes gradients. `validation.jsonl` selects the best
 epoch by validation loss. `data/classifier/test.jsonl` is for the separate
@@ -54,9 +62,9 @@ data in `data/evaluation/` are only read for text-leakage checks; their labels
 are not read by classifier training or evaluation. Keep future classifier
 calibration data separately designated and do not tune on a held-out test.
 
-The current hand-authored splits are small, synthetic scaffolding. They need
-broader source diversity and independent review before meaningful performance
-claims.
+The expanded hand-authored splits remain synthetic scaffolding. They need
+independent review and broader real-world source diversity before meaningful
+performance claims; no model has been trained on them.
 
 ## Local provisioning and commands
 
@@ -75,6 +83,12 @@ Validate the versioned data without heavyweight model dependencies:
 
 ```powershell
 uv run python -m backend.training.validate_classifier_data
+```
+
+Recreate the versioned JSONL files and manifest deterministically:
+
+```powershell
+uv run --offline python -m backend.training.generate_classifier_data
 ```
 
 Train locally, using only train/validation and writing the ignored artifact to
@@ -118,7 +132,7 @@ responsible for deciding how an unavailable detector is handled.
 
 - No trained classifier artifact is included; a fresh checkout reports the
   detector unavailable until a developer provisions and trains one locally.
-- The data is small and synthetic; metrics from it would not establish
+- The data is synthetic; metrics from it would not establish
   deployment suitability.
 - Scores are not calibrated and are not integrated into risk fusion.
 - Binary output does not predict attack categories.

@@ -23,6 +23,7 @@ from backend.detector.classifier.ml_classifier import (
 )
 from backend.models.contracts import NormalizedContent
 from backend.normalization.normalizer import normalize_input
+from backend.training.generate_classifier_data import generate
 from backend.training.validate_classifier_data import validate_classifier_data
 
 
@@ -212,8 +213,25 @@ class ClassifierTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[2]
         summary = validate_classifier_data(root / "data/classifier", root / "data/evaluation")
         self.assertEqual(summary["status"], "valid")
+        self.assertEqual(summary["total_records"], 1960)
+        self.assertEqual(summary["total_groups"], 138)
+        self.assertEqual(summary["hard_negative_count"], 695)
+        self.assertEqual(summary["hr_document_count"], 1154)
         self.assertTrue(summary["template_groups_disjoint"])
         self.assertTrue(summary["normalized_text_separation"])
+        self.assertFalse(summary["frozen_evaluation_overlap"])
+        self.assertEqual(summary["quality_checks"]["near_duplicate_pair_count_at_token_jaccard_0_85"], 0)
+        self.assertEqual(summary["quality_checks"]["repeated_long_sentence_groups"], 0)
+
+    def test_dataset_generator_reproduces_checked_in_split_hashes(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        with tempfile.TemporaryDirectory() as temporary:
+            generated = generate(Path(temporary))
+            checked_in = json.loads((root / "data/classifier/manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(generated["dataset_sha256"], checked_in["dataset_sha256"])
+            for name, expected in checked_in["split_sha256"].items():
+                actual = hashlib.sha256((Path(temporary) / name).read_bytes()).hexdigest()
+                self.assertEqual(actual, expected)
 
 
 if __name__ == "__main__":

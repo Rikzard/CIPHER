@@ -34,14 +34,14 @@ def train(
     data_dir: Path,
     frozen_evaluation_dir: Path,
     epochs: int = 3,
-    batch_size: int = 8,
+    batch_size: int | None = None,
     learning_rate: float = 2e-5,
     seed: int = 17,
 ) -> Path:
     """Fine-tune locally with a deterministic CPU loop and validation loss."""
     if not base_model_path.is_dir():
         raise FileNotFoundError(f"Local base model directory missing: {base_model_path}")
-    if epochs <= 0 or batch_size <= 0 or learning_rate <= 0:
+    if epochs <= 0 or (batch_size is not None and batch_size <= 0) or learning_rate <= 0:
         raise ValueError("epochs, batch_size, and learning_rate must be positive")
     validate_classifier_data(data_dir, frozen_evaluation_dir)
     try:
@@ -54,6 +54,12 @@ def train(
     random.seed(seed)
     torch.manual_seed(seed)
     torch.use_deterministic_algorithms(True, warn_only=True)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if batch_size is None:
+        # DistilBERT with 512-token windows fits comfortably on a 4 GB GPU at 2.
+        batch_size = 2 if device.type == "cuda" else 8
+    if device.type == "cuda":
+        torch.cuda.manual_seed_all(seed)
     tokenizer = AutoTokenizer.from_pretrained(
         str(base_model_path), local_files_only=True, trust_remote_code=False, use_fast=True
     )
@@ -67,7 +73,7 @@ def train(
         id2label={0: "benign", 1: "prompt_injection"},
         label2id={"benign": 0, "prompt_injection": 1},
     )
-    model.to("cpu")
+    model.to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
     train_records = _read(data_dir / "train.jsonl")
@@ -87,13 +93,13 @@ def train(
         random.Random(seed + epoch).shuffle(order)
         for start in range(0, len(order), batch_size):
             batch = [train_items[index] for index in order[start : start + batch_size]]
-            input_ids, attention_mask, labels = _batch_tensors(batch, pad_token_id, torch)
+            input_ids, attention_mask, labels = _batch_tensors(batch, pad_token_id, torch, device)
             optimizer.zero_grad(set_to_none=True)
             loss = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels).loss
             loss.backward()
             optimizer.step()
 
-        validation_loss = _mean_loss(model, validation_items, batch_size, pad_token_id, torch)
+        validation_loss = _mean_loss(model, validation_items, batch_size, pad_token_id, torch, device)
         if validation_loss < best_validation_loss:
             best_validation_loss = validation_loss
             best_epoch = epoch + 1
@@ -125,6 +131,8 @@ def train(
         "artifact_files_sha256": artifact_checksums,
         "validation_data_sha256": _sha256(data_dir / "validation.jsonl"),
         "training_config": {"epochs": epochs, "batch_size": batch_size, "learning_rate": learning_rate, "seed": seed},
+        "training_device": str(device),
+        "base_model_revision": getattr(model.config, "_commit_hash", None) or "local_snapshot_unspecified",
         "best_epoch": best_epoch,
         "best_validation_loss": best_validation_loss,
     }
@@ -142,22 +150,22 @@ def _tokenize_records(records: list[dict[str, Any]], tokenizer: Any) -> list[tup
     return items
 
 
-def _batch_tensors(batch: list[tuple[list[int], list[int], int]], pad_id: int, torch: Any) -> tuple[Any, Any, Any]:
+def _batch_tensors(batch: list[tuple[list[int], list[int], int]], pad_id: int, torch: Any, device: Any) -> tuple[Any, Any, Any]:
     ids = [torch.tensor(item[0], dtype=torch.long) for item in batch]
     masks = [torch.tensor(item[1], dtype=torch.long) for item in batch]
     input_ids = torch.nn.utils.rnn.pad_sequence(ids, batch_first=True, padding_value=pad_id)
     attention_mask = torch.nn.utils.rnn.pad_sequence(masks, batch_first=True, padding_value=0)
     labels = torch.tensor([item[2] for item in batch], dtype=torch.long)
-    return input_ids, attention_mask, labels
+    return input_ids.to(device), attention_mask.to(device), labels.to(device)
 
 
-def _mean_loss(model: Any, items: list[tuple[list[int], list[int], int]], batch_size: int, pad_id: int, torch: Any) -> float:
+def _mean_loss(model: Any, items: list[tuple[list[int], list[int], int]], batch_size: int, pad_id: int, torch: Any, device: Any) -> float:
     model.eval()
     losses: list[float] = []
     with torch.inference_mode():
         for start in range(0, len(items), batch_size):
             batch = items[start : start + batch_size]
-            input_ids, attention_mask, labels = _batch_tensors(batch, pad_id, torch)
+            input_ids, attention_mask, labels = _batch_tensors(batch, pad_id, torch, device)
             losses.append(float(model(input_ids=input_ids, attention_mask=attention_mask, labels=labels).loss.item()))
     if not losses:
         raise ValueError("Validation split produced no token chunks")
@@ -170,7 +178,7 @@ def main() -> int:
     parser.add_argument("--base-model", type=Path, default=root / "models/classifier/base/distilbert-base-uncased")
     parser.add_argument("--output", type=Path, default=root / "models/classifier/active")
     parser.add_argument("--epochs", type=int, default=3)
-    parser.add_argument("--batch-size", type=int, default=8)
+    parser.add_argument("--batch-size", type=int, default=None)
     parser.add_argument("--learning-rate", type=float, default=2e-5)
     args = parser.parse_args()
     result = train(

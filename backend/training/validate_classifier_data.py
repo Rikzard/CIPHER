@@ -1,8 +1,10 @@
-"""Validate classifier split schema and template/source-family separation."""
+"""Validate classifier corpus schema, split isolation, balance, and quality signals."""
 
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -10,9 +12,16 @@ from typing import Any
 from backend.evaluation.datasets import ATTACK_CATEGORIES
 from backend.normalization.normalizer import normalize_input
 
+HARD_NEGATIVE_TERMS = ("prompt", "system", "instruction", "ignore", "override", "administrator", "security")
+SPLITS = ("train.jsonl", "validation.jsonl", "test.jsonl")
+LABEL_LEAKAGE = re.compile(r"\b(?:label|class)\s*[:=]\s*(?:0|1|benign|malicious|prompt[_ -]?injection)\b", re.IGNORECASE)
+IGNORE_PREVIOUS = re.compile(r"ignore\s+(?:all\s+)?previous\s+instructions", re.IGNORECASE)
+SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
+TOKENIZE = re.compile(r"[\w']+", re.UNICODE)
+
 
 class ClassifierDatasetError(ValueError):
-    """Raised when classifier data has invalid labels or split leakage."""
+    """Raised when classifier data has invalid labels, metadata, or leakage."""
 
 
 def _read(path: Path) -> list[dict[str, Any]]:
@@ -28,9 +37,11 @@ def _read(path: Path) -> list[dict[str, Any]]:
             raise ClassifierDatasetError(f"Invalid JSON in {path} line {line_number}") from exc
         if not isinstance(item, dict):
             raise ClassifierDatasetError(f"Record in {path} line {line_number} must be an object")
-        required_strings = ("id", "group_id", "text", "source_kind")
+        required_strings = ("id", "group_id", "source_family", "template_family", "text", "source_kind")
         if any(not isinstance(item.get(key), str) or not item[key].strip() for key in required_strings):
-            raise ClassifierDatasetError(f"Record in {path} line {line_number} has missing/empty text fields")
+            raise ClassifierDatasetError(f"Record in {path} line {line_number} has missing/empty required string fields")
+        if item["group_id"] != item["source_family"] or item["group_id"] != item["template_family"]:
+            raise ClassifierDatasetError(f"Record {item['id']} has inconsistent source/template family metadata")
         label = item.get("label")
         if not isinstance(label, int) or isinstance(label, bool) or label not in (0, 1):
             raise ClassifierDatasetError(f"Record {item['id']} must have label 0 or 1")
@@ -39,6 +50,8 @@ def _read(path: Path) -> list[dict[str, Any]]:
             raise ClassifierDatasetError(f"Benign record {item['id']} must have null attack_category")
         if label == 1 and category not in ATTACK_CATEGORIES:
             raise ClassifierDatasetError(f"Malicious record {item['id']} has an invalid attack_category")
+        if LABEL_LEAKAGE.search(item["text"]):
+            raise ClassifierDatasetError(f"Record {item['id']} appears to state its label in text")
         records.append(item)
     if not records:
         raise ClassifierDatasetError(f"Dataset split is empty: {path}")
@@ -46,68 +59,6 @@ def _read(path: Path) -> list[dict[str, Any]]:
     if len(ids) != len(set(ids)):
         raise ClassifierDatasetError(f"Duplicate IDs within {path.name}")
     return records
-
-
-def validate_classifier_data(data_dir: str | Path, frozen_evaluation_dir: str | Path) -> dict[str, Any]:
-    data_dir = Path(data_dir)
-    frozen_dir = Path(frozen_evaluation_dir)
-    split_names = ("train.jsonl", "validation.jsonl", "test.jsonl")
-    splits = {name: _read(data_dir / name) for name in split_names}
-    split_ids: dict[str, set[str]] = {}
-    split_groups: dict[str, set[str]] = {}
-    split_texts: dict[str, set[str]] = {}
-    split_canonical: dict[str, set[str]] = {}
-    for name, records in splits.items():
-        split_ids[name] = {record["id"] for record in records}
-        split_groups[name] = {record["group_id"] for record in records}
-        split_texts[name] = {record["text"] for record in records}
-        split_canonical[name] = {normalize_input(record["text"]).canonical_text for record in records}
-        if len(split_canonical[name]) != len(records):
-            raise ClassifierDatasetError(f"Normalized duplicate texts within {name}")
-
-    for index, left in enumerate(split_names):
-        for right in split_names[index + 1:]:
-            if split_ids[left] & split_ids[right]:
-                raise ClassifierDatasetError(f"IDs overlap between {left} and {right}")
-            if split_groups[left] & split_groups[right]:
-                raise ClassifierDatasetError(f"Source/template group_ids overlap between {left} and {right}")
-            if split_texts[left] & split_texts[right]:
-                raise ClassifierDatasetError(f"Exact text duplicates between {left} and {right}")
-            if split_canonical[left] & split_canonical[right]:
-                raise ClassifierDatasetError(f"Normalized text duplicates between {left} and {right}")
-
-    frozen_records = []
-    for name in ("calibration.jsonl", "test.jsonl"):
-        frozen_records.extend(_read_frozen(frozen_dir / name))
-    frozen_raw = {record["text"] for record in frozen_records}
-    frozen_canonical = {normalize_input(record["text"]).canonical_text for record in frozen_records}
-    for name in split_names:
-        if split_texts[name] & frozen_raw:
-            raise ClassifierDatasetError(f"{name} exactly overlaps frozen evaluation text")
-        if split_canonical[name] & frozen_canonical:
-            raise ClassifierDatasetError(f"{name} overlaps normalized frozen evaluation text")
-
-    manifest_path = data_dir / "manifest.json"
-    try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise ClassifierDatasetError("Classifier dataset manifest is missing or malformed") from exc
-    if not isinstance(manifest, dict) or manifest.get("label_mapping") != {"benign": 0, "prompt_injection": 1}:
-        raise ClassifierDatasetError("Classifier dataset manifest has an invalid label mapping")
-    count_summary = {}
-    for name, records in splits.items():
-        counts = Counter("benign" if record["label"] == 0 else "malicious" for record in records)
-        count_summary[name] = {"count": len(records), **dict(sorted(counts.items()))}
-        declared = manifest.get("splits", {}).get(name)
-        if not isinstance(declared, dict) or declared.get("count") != len(records):
-            raise ClassifierDatasetError(f"Manifest count does not match {name}")
-    return {
-        "status": "valid",
-        "split_counts": count_summary,
-        "frozen_evaluation_examples_checked": len(frozen_records),
-        "template_groups_disjoint": True,
-        "normalized_text_separation": True,
-    }
 
 
 def _read_frozen(path: Path) -> list[dict[str, str]]:
@@ -123,14 +74,217 @@ def _read_frozen(path: Path) -> list[dict[str, str]]:
             raise ClassifierDatasetError(f"Malformed frozen evaluation data {path.name}:{line_number}") from exc
         if not isinstance(value, dict) or not isinstance(value.get("text"), str):
             raise ClassifierDatasetError(f"Malformed frozen evaluation record in {path.name}:{line_number}")
-        items.append(value)
+        # Only text is returned/read by callers; labels and scores are deliberately ignored.
+        items.append({"text": value["text"]})
     return items
+
+
+def _sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _canonical(text: str) -> str:
+    return normalize_input(text).canonical_text
+
+
+def _split_stats(records: list[dict[str, Any]]) -> dict[str, Any]:
+    labels = Counter("benign" if row["label"] == 0 else "malicious" for row in records)
+    categories = Counter(row["attack_category"] for row in records if row["attack_category"] is not None)
+    source_kinds = Counter(row["source_kind"] for row in records)
+    hard_negative_count = sum(
+        row["label"] == 0 and any(term in row["text"].casefold() for term in HARD_NEGATIVE_TERMS)
+        for row in records
+    )
+    hr_document_count = sum(row["source_kind"] in {"candidate_document", "hr_document"} for row in records)
+    return {
+        "count": len(records),
+        "labels": dict(sorted(labels.items())),
+        "attack_categories": dict(sorted(categories.items())),
+        "source_kinds": dict(sorted(source_kinds.items())),
+        "group_count": len({row["group_id"] for row in records}),
+        "hard_negative_count": hard_negative_count,
+        "hr_document_count": hr_document_count,
+    }
+
+
+def _quality_counts(records: list[dict[str, Any]]) -> dict[str, Any]:
+    folded_texts = Counter(row["text"].casefold() for row in records)
+    sentence_counts: Counter[str] = Counter()
+    for row in records:
+        for sentence in SENTENCE_SPLIT.split(row["text"]):
+            normalized_sentence = _canonical(sentence).casefold().strip()
+            if len(normalized_sentence) >= 60:
+                sentence_counts[normalized_sentence] += 1
+    repeated_sentences = [
+        {"count": count, "sample": sentence[:180]}
+        for sentence, count in sentence_counts.most_common()
+        if count > 1
+    ]
+    malicious = [row for row in records if row["label"] == 1]
+    malicious_casefold = Counter(row["text"].casefold() for row in malicious)
+    near_duplicate_examples: list[dict[str, Any]] = []
+    token_sets = [set(TOKENIZE.findall(_canonical(row["text"]).casefold())) for row in records]
+    for left_index, left_tokens in enumerate(token_sets):
+        for right_index in range(left_index + 1, len(token_sets)):
+            right_tokens = token_sets[right_index]
+            if not left_tokens or not right_tokens:
+                continue
+            intersection = len(left_tokens & right_tokens)
+            union = len(left_tokens | right_tokens)
+            similarity = intersection / union
+            if similarity >= 0.85:
+                near_duplicate_examples.append({
+                    "left_id": records[left_index]["id"],
+                    "right_id": records[right_index]["id"],
+                    "token_jaccard": round(similarity, 4),
+                })
+    return {
+        "case_only_duplicate_text_groups": sum(count > 1 for count in folded_texts.values()),
+        "repeated_long_sentence_groups": len(repeated_sentences),
+        "repeated_long_sentence_examples": repeated_sentences[:5],
+        "ignore_previous_instructions_count": sum(bool(IGNORE_PREVIOUS.search(row["text"])) for row in malicious),
+        "malicious_casefold_text_groups": sum(count > 1 for count in malicious_casefold.values()),
+        "near_duplicate_pair_count_at_token_jaccard_0_85": len(near_duplicate_examples),
+        "near_duplicate_examples": near_duplicate_examples[:10],
+    }
+
+
+def validate_classifier_data(data_dir: str | Path, frozen_evaluation_dir: str | Path) -> dict[str, Any]:
+    data_dir, frozen_dir = Path(data_dir), Path(frozen_evaluation_dir)
+    splits = {name: _read(data_dir / name) for name in SPLITS}
+    ids: dict[str, set[str]] = {}
+    groups: dict[str, set[str]] = {}
+    families: dict[str, set[str]] = {}
+    texts: dict[str, set[str]] = {}
+    canonical: dict[str, set[str]] = {}
+    for name, records in splits.items():
+        ids[name] = {row["id"] for row in records}
+        groups[name] = {row["group_id"] for row in records}
+        families[name] = {row["template_family"] for row in records}
+        texts[name] = {row["text"] for row in records}
+        canonical[name] = {_canonical(row["text"]) for row in records}
+        if len(texts[name]) != len(records):
+            raise ClassifierDatasetError(f"Exact text duplicates within {name}")
+        if len(canonical[name]) != len(records):
+            raise ClassifierDatasetError(f"Normalized duplicate texts within {name}")
+
+    for index, left in enumerate(SPLITS):
+        for right in SPLITS[index + 1 :]:
+            if ids[left] & ids[right]:
+                raise ClassifierDatasetError(f"IDs overlap between {left} and {right}")
+            if groups[left] & groups[right] or families[left] & families[right]:
+                raise ClassifierDatasetError(f"Source/template groups overlap between {left} and {right}")
+            if texts[left] & texts[right]:
+                raise ClassifierDatasetError(f"Exact text duplicates between {left} and {right}")
+            if canonical[left] & canonical[right]:
+                raise ClassifierDatasetError(f"Normalized text duplicates between {left} and {right}")
+
+    # Frozen sets contribute text only. Their labels are never opened or inspected.
+    frozen_records = [
+        record
+        for file_name in ("calibration.jsonl", "test.jsonl")
+        for record in _read_frozen(frozen_dir / file_name)
+    ]
+    frozen_raw = {record["text"] for record in frozen_records}
+    frozen_canonical = {_canonical(record["text"]) for record in frozen_records}
+    overlap_raw = sum(len(text_set & frozen_raw) for text_set in texts.values())
+    overlap_canonical = sum(len(text_set & frozen_canonical) for text_set in canonical.values())
+    if overlap_raw or overlap_canonical:
+        raise ClassifierDatasetError("Classifier texts overlap frozen evaluation text")
+
+    manifest_path = data_dir / "manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ClassifierDatasetError("Classifier dataset manifest is missing or malformed") from exc
+    if not isinstance(manifest, dict) or manifest.get("label_mapping") != {"benign": 0, "prompt_injection": 1}:
+        raise ClassifierDatasetError("Classifier dataset manifest has an invalid label mapping")
+    if not manifest.get("dataset_version") or not isinstance(manifest.get("source_metadata"), dict):
+        raise ClassifierDatasetError("Classifier dataset manifest lacks version/source metadata")
+
+    split_stats: dict[str, Any] = {}
+    all_records = [row for rows in splits.values() for row in rows]
+    split_hashes = {name: _sha256((data_dir / name).read_bytes()) for name in SPLITS}
+    for name, records in splits.items():
+        stats = _split_stats(records)
+        split_stats[name] = stats
+        minimum_records = 1000 if name == "train.jsonl" else 200
+        if stats["count"] < minimum_records:
+            raise ClassifierDatasetError(f"Dataset split is below its minimum size: {name}")
+        if stats["labels"].get("benign", 0) != stats["labels"].get("malicious", 0):
+            raise ClassifierDatasetError(f"Label distribution is not balanced in {name}")
+        if set(stats["attack_categories"]) != set(ATTACK_CATEGORIES):
+            raise ClassifierDatasetError(f"Attack category coverage is incomplete in {name}")
+        category_minimum = 20 if name == "train.jsonl" else 5
+        if any(count < category_minimum for count in stats["attack_categories"].values()):
+            raise ClassifierDatasetError(f"An attack category is underrepresented in {name}")
+        if stats["hard_negative_count"] < stats["labels"]["benign"] * 0.2:
+            raise ClassifierDatasetError(f"Hard-negative coverage is too low in {name}")
+        if stats["hr_document_count"] < stats["count"] * 0.2:
+            raise ClassifierDatasetError(f"Candidate/HR document examples are too few in {name}")
+        declared = manifest.get("splits", {}).get(name)
+        if declared != stats:
+            raise ClassifierDatasetError(f"Manifest statistics do not match {name}")
+        if manifest.get("split_sha256", {}).get(name) != split_hashes[name]:
+            raise ClassifierDatasetError(f"Manifest SHA-256 does not match {name}")
+
+    total_sha = _sha256("".join(split_hashes[name] for name in sorted(split_hashes)).encode("ascii"))
+    if manifest.get("dataset_sha256") != total_sha:
+        raise ClassifierDatasetError("Manifest dataset SHA-256 does not match split files")
+    if manifest.get("record_count") != len(all_records):
+        raise ClassifierDatasetError("Manifest total record count does not match split files")
+    group_count = len({row["group_id"] for row in all_records})
+    if manifest.get("group_count") != group_count:
+        raise ClassifierDatasetError("Manifest group count does not match split files")
+    if manifest.get("totals") != _split_stats(all_records):
+        raise ClassifierDatasetError("Manifest aggregate statistics do not match split files")
+
+    quality = _quality_counts(all_records)
+    if quality["ignore_previous_instructions_count"] > max(1, len([row for row in all_records if row["label"] == 1]) * 0.02):
+        raise ClassifierDatasetError("Over-reliance on the 'ignore previous instructions' phrase")
+    if quality["near_duplicate_pair_count_at_token_jaccard_0_85"]:
+        raise ClassifierDatasetError("Near-duplicate text pairs exceed the 0.85 token Jaccard threshold")
+    if quality["repeated_long_sentence_groups"]:
+        raise ClassifierDatasetError("Repeated long sentences found in the classifier corpus")
+    return {
+        "status": "valid",
+        "dataset_version": manifest["dataset_version"],
+        "split_counts": split_stats,
+        "total_records": len(all_records),
+        "total_groups": group_count,
+        "hard_negative_count": sum(stats["hard_negative_count"] for stats in split_stats.values()),
+        "hr_document_count": sum(stats["hr_document_count"] for stats in split_stats.values()),
+        "frozen_evaluation_examples_checked": len(frozen_records),
+        "frozen_evaluation_overlap": False,
+        "template_groups_disjoint": True,
+        "normalized_text_separation": True,
+        "quality_checks": quality,
+    }
 
 
 def main() -> int:
     root = Path(__file__).resolve().parents[2]
     result = validate_classifier_data(root / "data/classifier", root / "data/evaluation")
-    print(json.dumps(result, indent=2, sort_keys=True))
+    report = {
+        "status": result["status"],
+        "dataset_version": result["dataset_version"],
+        "total_records": result["total_records"],
+        "total_groups": result["total_groups"],
+        "splits": {
+            name: {
+                "count": stats["count"],
+                "labels": stats["labels"],
+                "category_counts": stats["attack_categories"],
+                "groups": stats["group_count"],
+            }
+            for name, stats in result["split_counts"].items()
+        },
+        "hard_negative_count": result["hard_negative_count"],
+        "hr_document_count": result["hr_document_count"],
+        "frozen_evaluation_overlap": result["frozen_evaluation_overlap"],
+        "quality_checks": result["quality_checks"],
+    }
+    print(json.dumps(report, indent=2, sort_keys=True))
     return 0
 
 
