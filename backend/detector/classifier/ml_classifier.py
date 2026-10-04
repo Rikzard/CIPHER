@@ -198,6 +198,7 @@ class MLClassifierDetector(BaseDetector):
                 self._runtime.tokenizer,
                 max_length=self.config.max_length,
                 stride=self.config.stride,
+                trust_classification=content.trust_classification,
             )
             probabilities = self._runtime.predict_attack_probabilities(chunks)
             if len(chunks) != len(probabilities) or not probabilities:

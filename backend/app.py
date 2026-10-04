@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from backend.api.analysis import router as analysis_router
+from backend.api.document_analysis import router as document_analysis_router
 from backend.api.health import router as health_router
 from backend.application.orchestrator import ApplicationService
 from backend.config import Settings
@@ -35,6 +36,7 @@ def create_app(
 
     application.include_router(health_router)
     application.include_router(analysis_router)
+    application.include_router(document_analysis_router)
     return application
 
 

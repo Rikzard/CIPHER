@@ -21,7 +21,7 @@ from backend.detector.classifier.ml_classifier import (
     ClassifierConfig,
     MLClassifierDetector,
 )
-from backend.models.contracts import NormalizedContent
+from backend.models.contracts import AnalysisInput, NormalizedContent, TrustClassification
 from backend.normalization.normalizer import normalize_input
 from backend.training.generate_classifier_data import generate
 from backend.training.validate_classifier_data import validate_classifier_data
@@ -77,8 +77,10 @@ class FakeRuntime:
     def __init__(self, probabilities: list[float] | None = None) -> None:
         self.tokenizer = WordTokenizer()
         self.probabilities = probabilities or [0.1]
+        self.last_chunks: list[TokenChunk] = []
 
     def predict_attack_probabilities(self, chunks: list[TokenChunk]) -> list[float]:
+        self.last_chunks = list(chunks)
         return [self.probabilities[min(index, len(self.probabilities) - 1)] for index in range(len(chunks))]
 
 
@@ -195,6 +197,26 @@ class ClassifierTests(unittest.TestCase):
         self.assertEqual(result.metadata["aggregation"], "max_chunk_probability")
         self.assertEqual(result.metadata["highest_scoring_chunk_index"], 1)
         self.assertGreater(result.metadata["chunk_count"], 1)
+
+    def test_applicant_trust_classification_propagates_to_every_classifier_chunk(self) -> None:
+        runtime = FakeRuntime([0.2, 0.7, 0.4])
+        detector = MLClassifierDetector(
+            ClassifierConfig(model_path=Path("unused")),
+            runtime=runtime,
+            manifest=valid_manifest(),
+        )
+        trust = TrustClassification.applicant_data()
+        content = normalize_input(
+            AnalysisInput(
+                content=" ".join(f"applicant-token-{index}" for index in range(800)),
+                trust_classification=trust,
+            )
+        )
+
+        detector.analyze(content)
+
+        self.assertGreater(len(runtime.last_chunks), 1)
+        self.assertTrue(all(chunk.trust_classification == trust for chunk in runtime.last_chunks))
 
     def test_repeat_inference_is_deterministic(self) -> None:
         detector = self.detector(0.67)

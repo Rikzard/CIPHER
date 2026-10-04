@@ -8,6 +8,10 @@ from backend.models.contracts import (
     NormalizedContent,
     PromptEnvelope,
     RiskAssessment,
+    ContentRole,
+    ContentSource,
+    TrustClassification,
+    TrustLevel,
 )
 
 
@@ -31,6 +35,7 @@ class TestContracts(unittest.TestCase):
         )
         self.assertEqual(norm.canonical_text, "raw")
         self.assertEqual(norm.char_count, 3)
+        self.assertEqual(norm.trust_classification.source, ContentSource.USER)
 
     def test_detector_result_valid_and_invalid(self) -> None:
         res = DetectorResult(
@@ -76,6 +81,29 @@ class TestContracts(unittest.TestCase):
         env = PromptEnvelope(trusted_instructions="You are helpful.", untrusted_data="User text")
         self.assertEqual(env.trusted_instructions, "You are helpful.")
         self.assertEqual(env.untrusted_data, "User text")
+
+    def test_trust_classification_assigns_hr_instructions_as_trusted(self) -> None:
+        trust = TrustClassification.hr_instruction()
+        self.assertEqual(trust.source, ContentSource.HR)
+        self.assertEqual(trust.content_role, ContentRole.INSTRUCTION)
+        self.assertEqual(trust.trust_level, TrustLevel.TRUSTED)
+
+    def test_trust_classification_assigns_applicant_content_as_untrusted_data(self) -> None:
+        trust = TrustClassification.applicant_data()
+        self.assertEqual(trust.source, ContentSource.APPLICANT)
+        self.assertEqual(trust.content_role, ContentRole.DATA)
+        self.assertEqual(trust.trust_level, TrustLevel.UNTRUSTED)
+
+    def test_trust_classification_rejects_applicant_promotion_and_is_immutable(self) -> None:
+        with self.assertRaises(ValidationError):
+            TrustClassification(
+                source=ContentSource.APPLICANT,
+                content_role=ContentRole.INSTRUCTION,
+                trust_level=TrustLevel.TRUSTED,
+            )
+        trust = TrustClassification.applicant_data()
+        with self.assertRaises(ValidationError):
+            trust.trust_level = TrustLevel.TRUSTED
 
 
 if __name__ == "__main__":

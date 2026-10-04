@@ -1,4 +1,4 @@
-"""Local binary ML classifier detector (not yet selected by the API pipeline)."""
+"""Local binary ML classifier detector."""
 
 from backend.detector.classifier.ml_classifier import ClassifierConfig, MLClassifierDetector
 

@@ -2,9 +2,73 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.json_schema import SkipJsonSchema
+
+
+class ContentSource(str, Enum):
+    """Origin assigned by the server-side application boundary."""
+
+    HR = "HR"
+    APPLICANT = "APPLICANT"
+    USER = "USER"
+    RETRIEVAL = "RETRIEVAL"
+    TOOL = "TOOL"
+
+
+class ContentRole(str, Enum):
+    INSTRUCTION = "INSTRUCTION"
+    DATA = "DATA"
+
+
+class TrustLevel(str, Enum):
+    TRUSTED = "TRUSTED"
+    UNTRUSTED = "UNTRUSTED"
+
+
+class TrustClassification(BaseModel):
+    """Immutable source, role, and trust label established before detection."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source: ContentSource
+    content_role: ContentRole
+    trust_level: TrustLevel
+
+    @model_validator(mode="after")
+    def validate_source_trust(self) -> "TrustClassification":
+        if self.source is ContentSource.HR:
+            if self.content_role is not ContentRole.INSTRUCTION or self.trust_level is not TrustLevel.TRUSTED:
+                raise ValueError("HR-originated content must be trusted instructions")
+        elif self.content_role is not ContentRole.DATA or self.trust_level is not TrustLevel.UNTRUSTED:
+            raise ValueError("Non-HR content must remain untrusted data")
+        return self
+
+    @classmethod
+    def hr_instruction(cls) -> "TrustClassification":
+        return cls(
+            source=ContentSource.HR,
+            content_role=ContentRole.INSTRUCTION,
+            trust_level=TrustLevel.TRUSTED,
+        )
+
+    @classmethod
+    def applicant_data(cls) -> "TrustClassification":
+        return cls(
+            source=ContentSource.APPLICANT,
+            content_role=ContentRole.DATA,
+            trust_level=TrustLevel.UNTRUSTED,
+        )
+
+    @classmethod
+    def user_data(cls) -> "TrustClassification":
+        return cls(
+            source=ContentSource.USER,
+            content_role=ContentRole.DATA,
+            trust_level=TrustLevel.UNTRUSTED,
+        )
 
 
 class AnalysisInput(BaseModel):
@@ -12,8 +76,9 @@ class AnalysisInput(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    content: str = Field(..., description="Original untrusted text content to analyze")
+    content: str = Field(..., description="Original text content to analyze")
     source_kind: str = Field(default="user", description="Source type: user, retrieval, tool, etc.")
+    trust_classification: TrustClassification = Field(default_factory=TrustClassification.user_data)
     metadata: Dict[str, str] = Field(default_factory=dict, description="Optional request/source metadata")
     original_content: SkipJsonSchema[str] = Field(default="", exclude=True, repr=False)
 
@@ -42,6 +107,7 @@ class NormalizedContent(BaseModel):
     original_text: str = Field(..., description="Preserved raw input text")
     canonical_text: str = Field(..., description="Normalized text representation")
     normalization_version: str = Field(default="1.0", description="Normalization algorithm version")
+    trust_classification: TrustClassification = Field(default_factory=TrustClassification.user_data)
     char_count: int = Field(..., ge=0, description="Character count of canonical text")
     word_count: int = Field(..., ge=0, description="Word count of canonical text")
     normalization_signals: Dict[str, int] = Field(

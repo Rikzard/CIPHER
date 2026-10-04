@@ -14,15 +14,18 @@ class TestConfig(unittest.TestCase):
         os.environ["CIPHER_APP_NAME"] = "EnvCIPHER"
         os.environ["CIPHER_APP_VERSION"] = "2.0.0"
         os.environ["CIPHER_ENVIRONMENT"] = "production"
+        os.environ["CIPHER_MAX_DOCUMENT_SIZE_BYTES"] = "4096"
         try:
             settings = Settings.from_environment()
             self.assertEqual(settings.app_name, "EnvCIPHER")
             self.assertEqual(settings.app_version, "2.0.0")
             self.assertEqual(settings.environment, "production")
+            self.assertEqual(settings.max_document_size_bytes, 4096)
         finally:
             os.environ.pop("CIPHER_APP_NAME", None)
             os.environ.pop("CIPHER_APP_VERSION", None)
             os.environ.pop("CIPHER_ENVIRONMENT", None)
+            os.environ.pop("CIPHER_MAX_DOCUMENT_SIZE_BYTES", None)
 
     def test_invalid_configuration_empty_app_name(self) -> None:
         os.environ["CIPHER_APP_NAME"] = "   "
@@ -47,6 +50,14 @@ class TestConfig(unittest.TestCase):
                 Settings.from_environment()
         finally:
             os.environ.pop("CIPHER_ENVIRONMENT", None)
+
+    def test_invalid_document_size_limit_is_rejected(self) -> None:
+        os.environ["CIPHER_MAX_DOCUMENT_SIZE_BYTES"] = "0"
+        try:
+            with self.assertRaises(ConfigurationError):
+                Settings.from_environment()
+        finally:
+            os.environ.pop("CIPHER_MAX_DOCUMENT_SIZE_BYTES", None)
 
 
 if __name__ == "__main__":

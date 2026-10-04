@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.application.orchestrator import ApplicationService
-from backend.models.contracts import AnalysisInput, DetectorResult
+from backend.models.contracts import AnalysisInput, DetectorResult, TrustClassification
 from backend.normalization.normalizer import NormalizationInputTooLarge
 
 router = APIRouter()
@@ -28,7 +28,7 @@ class AnalyzeRequest(BaseModel):
 
 
 class AnalyzeResponse(BaseModel):
-    """Structured result from the current rule and embedding detector pipeline."""
+    """Structured result from the rule, embedding, and ML detector pipeline."""
 
     analysis_id: UUID
     verdict: Literal["allow", "flag", "block"]
@@ -59,7 +59,13 @@ def analyze(
 
     started_at = time.perf_counter()
     try:
-        workflow = service.analyze_prompt(AnalysisInput(content=body.text, source_kind="user"))
+        workflow = service.analyze_prompt(
+            AnalysisInput(
+                content=body.text,
+                source_kind="user",
+                trust_classification=TrustClassification.user_data(),
+            )
+        )
     except NormalizationInputTooLarge:
         raise HTTPException(status_code=413, detail="text exceeds the analysis size limit") from None
     latency_ms = (time.perf_counter() - started_at) * 1000.0

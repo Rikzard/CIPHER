@@ -6,14 +6,17 @@ from typing import List, Sequence
 from pydantic import BaseModel, ConfigDict
 
 from backend.detector.base import BaseDetector
+from backend.detector.classifier import MLClassifierDetector
 from backend.detector.embeddings import EmbeddingDetector
 from backend.detector.rules import RuleDetector
 from backend.models.contracts import (
     AnalysisInput,
+    ContentSource,
     Decision,
     DetectorResult,
     NormalizedContent,
     RiskAssessment,
+    TrustClassification,
 )
 from backend.normalization.normalizer import normalize_input
 from backend.policy.decision import evaluate_decision
@@ -30,6 +33,7 @@ class AnalysisWorkflowResult(BaseModel):
     detector_results: List[DetectorResult]
     risk_assessment: RiskAssessment
     decision: Decision
+    trust_classification: TrustClassification
 
 
 class ApplicationService:
@@ -42,10 +46,17 @@ class ApplicationService:
             self._detectors = [
                 RuleDetector(),
                 EmbeddingDetector(),
+                MLClassifierDetector(),
             ]
 
     def analyze_prompt(self, input_data: AnalysisInput) -> AnalysisWorkflowResult:
         """Run complete workflow: request -> normalization -> detector execution -> risk assessment -> decision -> response."""
+        if input_data.trust_classification.source is ContentSource.HR:
+            raise ValueError("HR trust can only be assigned through analyze_hr_instructions")
+        return self._run_analysis(input_data)
+
+    def _run_analysis(self, input_data: AnalysisInput) -> AnalysisWorkflowResult:
+        """Execute the shared pipeline after a server-side interface assigns trust."""
         # 1. Normalization
         normalized = normalize_input(input_data)
 
@@ -78,4 +89,31 @@ class ApplicationService:
             detector_results=detector_results,
             risk_assessment=risk,
             decision=decision,
+            trust_classification=input_data.trust_classification,
+        )
+
+    def analyze_hr_instructions(self, content: str) -> AnalysisWorkflowResult:
+        """Analyze instructions supplied by the trusted HR application boundary."""
+        return self._run_analysis(
+            AnalysisInput(
+                content=content,
+                source_kind="hr_instruction",
+                trust_classification=TrustClassification.hr_instruction(),
+            )
+        )
+
+    def analyze_applicant_document_content(
+        self,
+        content: str,
+        *,
+        metadata: dict[str, str] | None = None,
+    ) -> AnalysisWorkflowResult:
+        """Analyze applicant-controlled document text as untrusted data."""
+        return self._run_analysis(
+            AnalysisInput(
+                content=content,
+                source_kind="document",
+                metadata=metadata or {},
+                trust_classification=TrustClassification.applicant_data(),
+            )
         )

@@ -6,7 +6,7 @@ import unicodedata
 from collections import Counter
 from collections.abc import Iterator
 
-from backend.models.contracts import AnalysisInput, NormalizedContent
+from backend.models.contracts import AnalysisInput, NormalizedContent, TrustClassification
 
 NORMALIZATION_VERSION = f"1.2+UCD-{unicodedata.unidata_version}"
 MAX_INPUT_CHARACTERS = 250_000
@@ -303,6 +303,10 @@ def normalize_input(input_data: AnalysisInput | str) -> NormalizedContent:
         original_text=original_text,
         canonical_text=canonical_text,
         normalization_version=NORMALIZATION_VERSION,
+        trust_classification=(
+            input_data.trust_classification if isinstance(input_data, AnalysisInput)
+            else TrustClassification.user_data()
+        ),
         char_count=len(canonical_text),
         word_count=len(canonical_text.split()),
         normalization_signals=dict(sorted(signals.items())),

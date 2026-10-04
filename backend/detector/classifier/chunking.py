@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Mapping, Protocol, Sequence
+
+from backend.models.contracts import TrustClassification
 
 
 class FastTokenizer(Protocol):
@@ -12,7 +14,7 @@ class FastTokenizer(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class TokenChunk:
-    """One model input window and its canonical-text span."""
+    """One model input window, canonical span, and inherited source trust."""
 
     input_ids: tuple[int, ...]
     attention_mask: tuple[int, ...]
@@ -20,6 +22,7 @@ class TokenChunk:
     chunk_index: int
     canonical_start: int
     canonical_end: int
+    trust_classification: TrustClassification = field(default_factory=TrustClassification.user_data)
 
 
 def tokenize_overlapping_chunks(
@@ -28,6 +31,7 @@ def tokenize_overlapping_chunks(
     *,
     max_length: int = 512,
     stride: int = 256,
+    trust_classification: TrustClassification | None = None,
 ) -> tuple[list[TokenChunk], int]:
     """Tokenize full text into overlapping model windows without truncation loss.
 
@@ -77,6 +81,7 @@ def tokenize_overlapping_chunks(
                 chunk_index=index,
                 canonical_start=min(start for start, _ in non_special),
                 canonical_end=max(end for _, end in non_special),
+                trust_classification=trust_classification or TrustClassification.user_data(),
             )
         )
 
