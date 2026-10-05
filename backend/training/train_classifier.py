@@ -16,6 +16,7 @@ from typing import Any
 
 from backend.detector.classifier.chunking import tokenize_overlapping_chunks
 from backend.detector.classifier.ml_classifier import CHECKPOINT_NAME
+from backend.normalization.normalizer import normalize_input
 from backend.training.validate_classifier_data import validate_classifier_data
 
 
@@ -109,13 +110,16 @@ def train(
     artifact_checksums = {
         path.relative_to(output_path).as_posix(): _sha256(path)
         for path in sorted(output_path.rglob("*"))
-        if path.is_file() and path.name != "cipher_classifier_manifest.json"
+        if path.is_file()
+        and path.name != "cipher_classifier_manifest.json"
+        and not path.name.endswith("_report.json")
     }
     if not artifact_checksums:
         raise RuntimeError("Training did not produce any model/tokenizer artifact files")
+    dataset_manifest = json.loads((data_dir / "manifest.json").read_text(encoding="utf-8"))
     manifest = {
         "artifact_schema_version": 1,
-        "artifact_version": "distilbert-base-uncased-cipher-binary-v1",
+        "artifact_version": f"distilbert-base-uncased-cipher-binary-{dataset_manifest['dataset_version']}",
         "model_name": "DistilBERT binary sequence classifier",
         "model_checkpoint": CHECKPOINT_NAME,
         "tokenizer_version": f"transformers={transformers_version};tokenizers={tokenizers.__version__};class={type(tokenizer).__name__}",
@@ -125,11 +129,17 @@ def train(
         "aggregation": "max_chunk_probability",
         "finding_threshold": 0.5,
         "probability_calibrated": False,
-        "training_dataset_version": json.loads((data_dir / "manifest.json").read_text(encoding="utf-8"))["dataset_version"],
+        "checkpoint_selection_criterion": "lowest validation cross-entropy on the stratified validation split; validation includes short questions, short statements, and document structures. Synthetic test, calibration reserve, held-out HR-document test, and independent probes are not used for checkpoint selection.",
+        "training_dataset_version": dataset_manifest["dataset_version"],
         "training_timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "training_data_sha256": _sha256(data_dir / "train.jsonl"),
         "artifact_files_sha256": artifact_checksums,
         "validation_data_sha256": _sha256(data_dir / "validation.jsonl"),
+        "reserved_evaluation_data_sha256": {
+            name: _sha256(data_dir / name)
+            for name in ("calibration.jsonl", "test.jsonl", "hr_document_final_test.jsonl")
+        },
+        "independent_short_probe_sha256": _sha256(frozen_evaluation_dir / "classifier_short_probes.jsonl"),
         "training_config": {"epochs": epochs, "batch_size": batch_size, "learning_rate": learning_rate, "seed": seed},
         "training_device": str(device),
         "base_model_revision": getattr(model.config, "_commit_hash", None) or "local_snapshot_unspecified",
@@ -145,7 +155,8 @@ def train(
 def _tokenize_records(records: list[dict[str, Any]], tokenizer: Any) -> list[tuple[list[int], list[int], int]]:
     items: list[tuple[list[int], list[int], int]] = []
     for record in records:
-        chunks, _ = tokenize_overlapping_chunks(record["text"], tokenizer, max_length=512, stride=256)
+        canonical_text = normalize_input(record["text"]).canonical_text
+        chunks, _ = tokenize_overlapping_chunks(canonical_text, tokenizer, max_length=512, stride=256)
         items.extend((list(chunk.input_ids), list(chunk.attention_mask), int(record["label"])) for chunk in chunks)
     return items
 

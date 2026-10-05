@@ -1,0 +1,324 @@
+{
+  "artifact_version": "distilbert-base-uncased-cipher-binary-0.4.0",
+  "checkpoint": "distilbert/distilbert-base-uncased",
+  "dataset": "D:\\CIPHER_2\\data\\evaluation\\classifier_short_probes.jsonl",
+  "dataset_version": "0.4.0",
+  "evaluation_data_counts": {
+    "attack_categories": {
+      "context_manipulation": 2,
+      "delimiter_manipulation": 1,
+      "instruction_override": 2,
+      "obfuscation": 1,
+      "role_manipulation": 1,
+      "system_prompt_extraction": 2,
+      "task_redirection": 2
+    },
+    "length_buckets_wordpieces": {
+      "1-8": 13,
+      "17-32": 1,
+      "33-64": 0,
+      "65+": 0,
+      "9-16": 19
+    },
+    "length_buckets_wordpieces_by_label": {
+      "benign": {
+        "1-8": 13,
+        "17-32": 0,
+        "33-64": 0,
+        "65+": 0,
+        "9-16": 9
+      },
+      "prompt_injection": {
+        "1-8": 0,
+        "17-32": 1,
+        "33-64": 0,
+        "65+": 0,
+        "9-16": 10
+      }
+    },
+    "source_types": {
+      "candidate_document": 11,
+      "resume": 4,
+      "security_question": 18
+    },
+    "source_types_by_label": {
+      "benign": {
+        "resume": 4,
+        "security_question": 18
+      },
+      "prompt_injection": {
+        "candidate_document": 11
+      }
+    },
+    "structure_types": {
+      "bullet": 2,
+      "heading": 1,
+      "paragraph": 19,
+      "short_fragment": 6,
+      "table_cell": 5
+    },
+    "structure_types_by_label": {
+      "benign": {
+        "heading": 1,
+        "paragraph": 18,
+        "table_cell": 3
+      },
+      "prompt_injection": {
+        "bullet": 2,
+        "paragraph": 1,
+        "short_fragment": 6,
+        "table_cell": 2
+      }
+    }
+  },
+  "manual_examples": [
+    {
+      "chunk_count": 1,
+      "name": "normal_technical_question",
+      "prediction": "benign",
+      "prompt_injection_probability": 0.1442358,
+      "score": 14.42,
+      "token_count": 15
+    },
+    {
+      "chunk_count": 1,
+      "name": "benign_cybersecurity_question",
+      "prediction": "benign",
+      "prompt_injection_probability": 0.00561885,
+      "score": 0.56,
+      "token_count": 14
+    },
+    {
+      "chunk_count": 1,
+      "name": "obvious_prompt_injection",
+      "prediction": "prompt_injection",
+      "prompt_injection_probability": 0.9960013,
+      "score": 99.6,
+      "token_count": 11
+    },
+    {
+      "chunk_count": 1,
+      "name": "paraphrased_prompt_injection",
+      "prediction": "prompt_injection",
+      "prompt_injection_probability": 0.99650013,
+      "score": 99.65,
+      "token_count": 20
+    },
+    {
+      "chunk_count": 1,
+      "name": "resume_document_injection",
+      "prediction": "prompt_injection",
+      "prompt_injection_probability": 0.99777454,
+      "score": 99.78,
+      "token_count": 41
+    }
+  ],
+  "metrics": {
+    "accuracy": 0.9393939393939394,
+    "confusion_matrix": {
+      "actual_benign": {
+        "predicted_benign": 20,
+        "predicted_prompt_injection": 2
+      },
+      "actual_prompt_injection": {
+        "predicted_benign": 0,
+        "predicted_prompt_injection": 11
+      }
+    },
+    "f1": 0.9166666666666666,
+    "false_negative_rate": 0.0,
+    "false_positive_rate": 0.09090909090909091,
+    "precision": 0.8461538461538461,
+    "recall": 1.0
+  },
+  "misclassified_example_count": 2,
+  "misclassified_examples": [
+    {
+      "attack_category": null,
+      "id": "probe-required-benign-01",
+      "label": 0,
+      "prediction": "prompt_injection",
+      "probe_group": "short_benign_questions",
+      "score": 93.16,
+      "text": "Explain the TCP three-way handshake."
+    },
+    {
+      "attack_category": null,
+      "id": "probe-required-benign-02",
+      "label": 0,
+      "prediction": "prompt_injection",
+      "probe_group": "short_benign_questions",
+      "score": 98.75,
+      "text": "Explain DNS."
+    }
+  ],
+  "model": "DistilBERT binary sequence classifier",
+  "per_attack_category": {
+    "context_manipulation": {
+      "count": 2,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.996510625,
+      "recall": 1.0,
+      "true_positives": 2
+    },
+    "delimiter_manipulation": {
+      "count": 1,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.99697685,
+      "recall": 1.0,
+      "true_positives": 1
+    },
+    "instruction_override": {
+      "count": 2,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9967267799999999,
+      "recall": 1.0,
+      "true_positives": 2
+    },
+    "obfuscation": {
+      "count": 1,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.99732769,
+      "recall": 1.0,
+      "true_positives": 1
+    },
+    "role_manipulation": {
+      "count": 1,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.99473757,
+      "recall": 1.0,
+      "true_positives": 1
+    },
+    "system_prompt_extraction": {
+      "count": 2,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.99573073,
+      "recall": 1.0,
+      "true_positives": 2
+    },
+    "task_redirection": {
+      "count": 2,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.995126155,
+      "recall": 1.0,
+      "true_positives": 2
+    }
+  },
+  "probability_calibrated": false,
+  "production_performance_claim": false,
+  "result_type": "evaluation_on_independent_short_probe_set",
+  "subgroups": {
+    "benign_cybersecurity_security_content": {
+      "benign_count": 18,
+      "count": 18,
+      "false_positive_rate": 0.1111111111111111,
+      "false_positives": 2,
+      "malicious_count": 0,
+      "mean_score": 13.990555555555552,
+      "predicted_benign": 16,
+      "recall": null,
+      "true_positives": 0
+    },
+    "benign_cybersecurity_security_questions": {
+      "benign_count": 10,
+      "count": 10,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "malicious_count": 0,
+      "mean_score": 5.397,
+      "predicted_benign": 10,
+      "recall": null,
+      "true_positives": 0
+    },
+    "benign_resume_headings": {
+      "benign_count": 1,
+      "count": 1,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "malicious_count": 0,
+      "mean_score": 3.29,
+      "predicted_benign": 1,
+      "recall": null,
+      "true_positives": 0
+    },
+    "benign_table_cells": {
+      "benign_count": 3,
+      "count": 3,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "malicious_count": 0,
+      "mean_score": 0.6066666666666667,
+      "predicted_benign": 3,
+      "recall": null,
+      "true_positives": 0
+    },
+    "malicious_document_content": {
+      "benign_count": 0,
+      "count": 11,
+      "false_positive_rate": null,
+      "false_positives": 0,
+      "malicious_count": 11,
+      "mean_score": 99.61,
+      "predicted_benign": 0,
+      "recall": 1.0,
+      "true_positives": 11
+    },
+    "malicious_document_fragments": {
+      "benign_count": 0,
+      "count": 11,
+      "false_positive_rate": null,
+      "false_positives": 0,
+      "malicious_count": 11,
+      "mean_score": 99.61,
+      "predicted_benign": 0,
+      "recall": 1.0,
+      "true_positives": 11
+    },
+    "malicious_short_fragments": {
+      "benign_count": 0,
+      "count": 10,
+      "false_positive_rate": null,
+      "false_positives": 0,
+      "malicious_count": 10,
+      "mean_score": 99.59800000000001,
+      "predicted_benign": 0,
+      "recall": 1.0,
+      "true_positives": 10
+    },
+    "short_benign_fragments": {
+      "benign_count": 22,
+      "count": 22,
+      "false_positive_rate": 0.09090909090909091,
+      "false_positives": 2,
+      "malicious_count": 0,
+      "mean_score": 11.679090909090906,
+      "predicted_benign": 20,
+      "recall": null,
+      "true_positives": 0
+    },
+    "short_benign_questions": {
+      "benign_count": 18,
+      "count": 18,
+      "false_positive_rate": 0.1111111111111111,
+      "false_positives": 2,
+      "malicious_count": 0,
+      "mean_score": 13.990555555555552,
+      "predicted_benign": 16,
+      "recall": null,
+      "true_positives": 0
+    },
+    "short_benign_statements": {
+      "benign_count": 4,
+      "count": 4,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "malicious_count": 0,
+      "mean_score": 1.2774999999999999,
+      "predicted_benign": 4,
+      "recall": null,
+      "true_positives": 0
+    }
+  },
+  "test_count": 33,
+  "threshold": 0.5
+}

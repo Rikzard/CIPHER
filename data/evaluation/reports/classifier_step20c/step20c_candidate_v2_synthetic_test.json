@@ -1,0 +1,332 @@
+{
+  "artifact_version": "distilbert-base-uncased-cipher-binary-0.4.0",
+  "checkpoint": "distilbert/distilbert-base-uncased",
+  "dataset": "D:\\CIPHER_2\\data\\classifier\\test.jsonl",
+  "dataset_version": "0.4.0",
+  "evaluation_data_counts": {
+    "attack_categories": {
+      "context_manipulation": 52,
+      "delimiter_manipulation": 52,
+      "instruction_override": 53,
+      "obfuscation": 52,
+      "role_manipulation": 52,
+      "system_prompt_extraction": 52,
+      "task_redirection": 52
+    },
+    "length_buckets_wordpieces": {
+      "1-8": 49,
+      "17-32": 157,
+      "33-64": 152,
+      "65+": 270,
+      "9-16": 102
+    },
+    "length_buckets_wordpieces_by_label": {
+      "benign": {
+        "1-8": 41,
+        "17-32": 38,
+        "33-64": 56,
+        "65+": 153,
+        "9-16": 77
+      },
+      "prompt_injection": {
+        "1-8": 8,
+        "17-32": 119,
+        "33-64": 96,
+        "65+": 117,
+        "9-16": 25
+      }
+    },
+    "source_types": {
+      "candidate_document": 181,
+      "cover_letter": 54,
+      "resume": 123,
+      "security_question": 62,
+      "synthetic": 310
+    },
+    "source_types_by_label": {
+      "benign": {
+        "candidate_document": 26,
+        "cover_letter": 22,
+        "resume": 85,
+        "security_question": 62,
+        "synthetic": 170
+      },
+      "prompt_injection": {
+        "candidate_document": 155,
+        "cover_letter": 32,
+        "resume": 38,
+        "synthetic": 140
+      }
+    },
+    "structure_types": {
+      "bullet": 84,
+      "heading": 24,
+      "long_prose": 312,
+      "paragraph": 148,
+      "short_fragment": 60,
+      "table_cell": 80,
+      "table_header": 22
+    },
+    "structure_types_by_label": {
+      "benign": {
+        "bullet": 33,
+        "heading": 18,
+        "long_prose": 156,
+        "paragraph": 89,
+        "short_fragment": 21,
+        "table_cell": 31,
+        "table_header": 17
+      },
+      "prompt_injection": {
+        "bullet": 51,
+        "heading": 6,
+        "long_prose": 156,
+        "paragraph": 59,
+        "short_fragment": 39,
+        "table_cell": 49,
+        "table_header": 5
+      }
+    }
+  },
+  "manual_examples": [
+    {
+      "chunk_count": 1,
+      "name": "normal_technical_question",
+      "prediction": "benign",
+      "prompt_injection_probability": 0.01139255,
+      "score": 1.14,
+      "token_count": 15
+    },
+    {
+      "chunk_count": 1,
+      "name": "benign_cybersecurity_question",
+      "prediction": "benign",
+      "prompt_injection_probability": 0.00728791,
+      "score": 0.73,
+      "token_count": 14
+    },
+    {
+      "chunk_count": 1,
+      "name": "obvious_prompt_injection",
+      "prediction": "prompt_injection",
+      "prompt_injection_probability": 0.98753786,
+      "score": 98.75,
+      "token_count": 11
+    },
+    {
+      "chunk_count": 1,
+      "name": "paraphrased_prompt_injection",
+      "prediction": "prompt_injection",
+      "prompt_injection_probability": 0.99582183,
+      "score": 99.58,
+      "token_count": 20
+    },
+    {
+      "chunk_count": 1,
+      "name": "resume_document_injection",
+      "prediction": "prompt_injection",
+      "prompt_injection_probability": 0.9974491,
+      "score": 99.74,
+      "token_count": 41
+    }
+  ],
+  "metrics": {
+    "accuracy": 0.9986301369863013,
+    "confusion_matrix": {
+      "actual_benign": {
+        "predicted_benign": 364,
+        "predicted_prompt_injection": 1
+      },
+      "actual_prompt_injection": {
+        "predicted_benign": 0,
+        "predicted_prompt_injection": 365
+      }
+    },
+    "f1": 0.9986320109439125,
+    "false_negative_rate": 0.0,
+    "false_positive_rate": 0.0027397260273972603,
+    "precision": 0.9972677595628415,
+    "recall": 1.0
+  },
+  "misclassified_example_count": 1,
+  "misclassified_examples": [
+    {
+      "attack_category": null,
+      "id": "test-short-0-0066",
+      "label": 0,
+      "prediction": "prompt_injection",
+      "probe_group": null,
+      "score": 81.6,
+      "text": "Study note: ACADEMIC BACKGROUND in the recent portfolio sample."
+    }
+  ],
+  "model": "DistilBERT binary sequence classifier",
+  "per_attack_category": {
+    "context_manipulation": {
+      "count": 52,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9967692388461534,
+      "recall": 1.0,
+      "true_positives": 52
+    },
+    "delimiter_manipulation": {
+      "count": 52,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9967562225,
+      "recall": 1.0,
+      "true_positives": 52
+    },
+    "instruction_override": {
+      "count": 53,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9967876579245283,
+      "recall": 1.0,
+      "true_positives": 53
+    },
+    "obfuscation": {
+      "count": 52,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9970123700000001,
+      "recall": 1.0,
+      "true_positives": 52
+    },
+    "role_manipulation": {
+      "count": 52,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9970603086538462,
+      "recall": 1.0,
+      "true_positives": 52
+    },
+    "system_prompt_extraction": {
+      "count": 52,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9967260278846152,
+      "recall": 1.0,
+      "true_positives": 52
+    },
+    "task_redirection": {
+      "count": 52,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9970895203846155,
+      "recall": 1.0,
+      "true_positives": 52
+    }
+  },
+  "probability_calibrated": false,
+  "production_performance_claim": false,
+  "result_type": "evaluation_on_current_classifier_split",
+  "subgroups": {
+    "benign_cybersecurity_security_content": {
+      "benign_count": 92,
+      "count": 92,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "malicious_count": 0,
+      "mean_score": 0.523804347826087,
+      "predicted_benign": 92,
+      "recall": null,
+      "true_positives": 0
+    },
+    "benign_cybersecurity_security_questions": {
+      "benign_count": 43,
+      "count": 43,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "malicious_count": 0,
+      "mean_score": 0.6030232558139534,
+      "predicted_benign": 43,
+      "recall": null,
+      "true_positives": 0
+    },
+    "benign_resume_headings": {
+      "benign_count": 18,
+      "count": 18,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "malicious_count": 0,
+      "mean_score": 2.4216666666666664,
+      "predicted_benign": 18,
+      "recall": null,
+      "true_positives": 0
+    },
+    "benign_table_cells": {
+      "benign_count": 48,
+      "count": 48,
+      "false_positive_rate": 0.020833333333333332,
+      "false_positives": 1,
+      "malicious_count": 0,
+      "mean_score": 2.814999999999999,
+      "predicted_benign": 47,
+      "recall": null,
+      "true_positives": 0
+    },
+    "malicious_document_content": {
+      "benign_count": 0,
+      "count": 225,
+      "false_positive_rate": null,
+      "false_positives": 0,
+      "malicious_count": 225,
+      "mean_score": 99.66000000000001,
+      "predicted_benign": 0,
+      "recall": 1.0,
+      "true_positives": 225
+    },
+    "malicious_document_fragments": {
+      "benign_count": 0,
+      "count": 152,
+      "false_positive_rate": null,
+      "false_positives": 0,
+      "malicious_count": 152,
+      "mean_score": 99.63276315789464,
+      "predicted_benign": 0,
+      "recall": 1.0,
+      "true_positives": 152
+    },
+    "malicious_short_fragments": {
+      "benign_count": 0,
+      "count": 33,
+      "false_positive_rate": null,
+      "false_positives": 0,
+      "malicious_count": 33,
+      "mean_score": 99.51787878787877,
+      "predicted_benign": 0,
+      "recall": 1.0,
+      "true_positives": 33
+    },
+    "short_benign_fragments": {
+      "benign_count": 118,
+      "count": 118,
+      "false_positive_rate": 0.00847457627118644,
+      "false_positives": 1,
+      "malicious_count": 0,
+      "mean_score": 1.7993220338983054,
+      "predicted_benign": 117,
+      "recall": null,
+      "true_positives": 0
+    },
+    "short_benign_questions": {
+      "benign_count": 60,
+      "count": 60,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "malicious_count": 0,
+      "mean_score": 0.9981666666666668,
+      "predicted_benign": 60,
+      "recall": null,
+      "true_positives": 0
+    },
+    "short_benign_statements": {
+      "benign_count": 58,
+      "count": 58,
+      "false_positive_rate": 0.017241379310344827,
+      "false_positives": 1,
+      "malicious_count": 0,
+      "mean_score": 2.6281034482758616,
+      "predicted_benign": 57,
+      "recall": null,
+      "true_positives": 0
+    }
+  },
+  "test_count": 730,
+  "threshold": 0.5
+}

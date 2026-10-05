@@ -1,0 +1,124 @@
+{
+  "train": {
+    "count": 2560,
+    "dataset": "D:\\CIPHER_2\\data\\classifier\\train.jsonl",
+    "dataset_sha256": "5a2dde1da32c3e07db153381cb3ce0b980fec3ff56b6349532efaa55d3226a3e",
+    "labels": {
+      "benign": 1280,
+      "prompt_injection": 1280
+    },
+    "length_buckets_wordpieces_by_label": {
+      "benign": {
+        "1-8": 127,
+        "17-32": 126,
+        "33-64": 299,
+        "65+": 582,
+        "9-16": 146
+      },
+      "prompt_injection": {
+        "1-8": 18,
+        "17-32": 309,
+        "33-64": 484,
+        "65+": 399,
+        "9-16": 70
+      }
+    },
+    "preprocessing": "existing normalize_input(...).canonical_text, then local fast tokenizer with add_special_tokens=False",
+    "source_types_by_label": {
+      "benign": {
+        "candidate_document": 66,
+        "cover_letter": 64,
+        "resume": 216,
+        "security_question": 159,
+        "synthetic": 775
+      },
+      "prompt_injection": {
+        "candidate_document": 393,
+        "cover_letter": 93,
+        "resume": 94,
+        "synthetic": 700
+      }
+    },
+    "structure_types_by_label": {
+      "benign": {
+        "bullet": 82,
+        "heading": 45,
+        "long_prose": 746,
+        "paragraph": 230,
+        "short_fragment": 54,
+        "table_cell": 79,
+        "table_header": 44
+      },
+      "prompt_injection": {
+        "bullet": 127,
+        "heading": 15,
+        "long_prose": 746,
+        "paragraph": 155,
+        "short_fragment": 99,
+        "table_cell": 124,
+        "table_header": 14
+      }
+    }
+  },
+  "validation": {
+    "count": 730,
+    "dataset": "D:\\CIPHER_2\\data\\classifier\\validation.jsonl",
+    "dataset_sha256": "939b721a1250f22a2733c9cdcdde764e9a3fc6a8efcea8739e105bab1b52034a",
+    "labels": {
+      "benign": 365,
+      "prompt_injection": 365
+    },
+    "length_buckets_wordpieces_by_label": {
+      "benign": {
+        "1-8": 36,
+        "17-32": 37,
+        "33-64": 59,
+        "65+": 151,
+        "9-16": 82
+      },
+      "prompt_injection": {
+        "1-8": 5,
+        "17-32": 111,
+        "33-64": 96,
+        "65+": 120,
+        "9-16": 33
+      }
+    },
+    "preprocessing": "existing normalize_input(...).canonical_text, then local fast tokenizer with add_special_tokens=False",
+    "source_types_by_label": {
+      "benign": {
+        "candidate_document": 25,
+        "cover_letter": 23,
+        "resume": 85,
+        "security_question": 62,
+        "synthetic": 170
+      },
+      "prompt_injection": {
+        "candidate_document": 155,
+        "cover_letter": 35,
+        "resume": 35,
+        "synthetic": 140
+      }
+    },
+    "structure_types_by_label": {
+      "benign": {
+        "bullet": 32,
+        "heading": 18,
+        "long_prose": 159,
+        "paragraph": 87,
+        "short_fragment": 22,
+        "table_cell": 30,
+        "table_header": 17
+      },
+      "prompt_injection": {
+        "bullet": 50,
+        "heading": 6,
+        "long_prose": 159,
+        "paragraph": 57,
+        "short_fragment": 40,
+        "table_cell": 48,
+        "table_header": 5
+      }
+    }
+  }
+}

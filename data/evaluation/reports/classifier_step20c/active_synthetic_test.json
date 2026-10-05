@@ -1,0 +1,413 @@
+{
+  "artifact_version": "distilbert-base-uncased-cipher-binary-0.4.0",
+  "checkpoint": "distilbert/distilbert-base-uncased",
+  "dataset": "D:\\CIPHER_2\\data\\classifier\\test.jsonl",
+  "dataset_version": "0.4.0",
+  "evaluation_data_counts": {
+    "attack_categories": {
+      "context_manipulation": 52,
+      "delimiter_manipulation": 52,
+      "instruction_override": 53,
+      "obfuscation": 52,
+      "role_manipulation": 52,
+      "system_prompt_extraction": 52,
+      "task_redirection": 52
+    },
+    "length_buckets_wordpieces": {
+      "1-8": 41,
+      "17-32": 157,
+      "33-64": 152,
+      "65+": 270,
+      "9-16": 110
+    },
+    "length_buckets_wordpieces_by_label": {
+      "benign": {
+        "1-8": 33,
+        "17-32": 38,
+        "33-64": 56,
+        "65+": 153,
+        "9-16": 85
+      },
+      "prompt_injection": {
+        "1-8": 8,
+        "17-32": 119,
+        "33-64": 96,
+        "65+": 117,
+        "9-16": 25
+      }
+    },
+    "source_types": {
+      "candidate_document": 181,
+      "cover_letter": 54,
+      "resume": 123,
+      "security_question": 62,
+      "synthetic": 310
+    },
+    "source_types_by_label": {
+      "benign": {
+        "candidate_document": 26,
+        "cover_letter": 22,
+        "resume": 85,
+        "security_question": 62,
+        "synthetic": 170
+      },
+      "prompt_injection": {
+        "candidate_document": 155,
+        "cover_letter": 32,
+        "resume": 38,
+        "synthetic": 140
+      }
+    },
+    "structure_types": {
+      "bullet": 84,
+      "heading": 24,
+      "long_prose": 312,
+      "paragraph": 148,
+      "short_fragment": 60,
+      "table_cell": 80,
+      "table_header": 22
+    },
+    "structure_types_by_label": {
+      "benign": {
+        "bullet": 33,
+        "heading": 18,
+        "long_prose": 156,
+        "paragraph": 89,
+        "short_fragment": 21,
+        "table_cell": 31,
+        "table_header": 17
+      },
+      "prompt_injection": {
+        "bullet": 51,
+        "heading": 6,
+        "long_prose": 156,
+        "paragraph": 59,
+        "short_fragment": 39,
+        "table_cell": 49,
+        "table_header": 5
+      }
+    }
+  },
+  "manual_examples": [
+    {
+      "chunk_count": 1,
+      "name": "normal_technical_question",
+      "prediction": "benign",
+      "prompt_injection_probability": 0.1442358,
+      "score": 14.42,
+      "token_count": 15
+    },
+    {
+      "chunk_count": 1,
+      "name": "benign_cybersecurity_question",
+      "prediction": "benign",
+      "prompt_injection_probability": 0.00561885,
+      "score": 0.56,
+      "token_count": 14
+    },
+    {
+      "chunk_count": 1,
+      "name": "obvious_prompt_injection",
+      "prediction": "prompt_injection",
+      "prompt_injection_probability": 0.9960013,
+      "score": 99.6,
+      "token_count": 11
+    },
+    {
+      "chunk_count": 1,
+      "name": "paraphrased_prompt_injection",
+      "prediction": "prompt_injection",
+      "prompt_injection_probability": 0.99650013,
+      "score": 99.65,
+      "token_count": 20
+    },
+    {
+      "chunk_count": 1,
+      "name": "resume_document_injection",
+      "prediction": "prompt_injection",
+      "prompt_injection_probability": 0.99777454,
+      "score": 99.78,
+      "token_count": 41
+    }
+  ],
+  "metrics": {
+    "accuracy": 0.9863013698630136,
+    "confusion_matrix": {
+      "actual_benign": {
+        "predicted_benign": 355,
+        "predicted_prompt_injection": 10
+      },
+      "actual_prompt_injection": {
+        "predicted_benign": 0,
+        "predicted_prompt_injection": 365
+      }
+    },
+    "f1": 0.9864864864864865,
+    "false_negative_rate": 0.0,
+    "false_positive_rate": 0.0273972602739726,
+    "precision": 0.9733333333333334,
+    "recall": 1.0
+  },
+  "misclassified_example_count": 10,
+  "misclassified_examples": [
+    {
+      "attack_category": null,
+      "id": "test-short-0-0067",
+      "label": 0,
+      "prediction": "prompt_injection",
+      "probe_group": null,
+      "score": 85.12,
+      "text": "Portfolio detail — Role | Employer | Dates in the recent portfolio sample."
+    },
+    {
+      "attack_category": null,
+      "id": "test-short-0-0081",
+      "label": 0,
+      "prediction": "prompt_injection",
+      "probe_group": null,
+      "score": 91.21,
+      "text": "Study note: COURSEWORK in the recent portfolio sample."
+    },
+    {
+      "attack_category": null,
+      "id": "test-short-0-0096",
+      "label": 0,
+      "prediction": "prompt_injection",
+      "probe_group": null,
+      "score": 99.29,
+      "text": "Portfolio detail: Credential | School | Completion in the recent portfolio sample."
+    },
+    {
+      "attack_category": null,
+      "id": "test-short-0-0069",
+      "label": 0,
+      "prediction": "prompt_injection",
+      "probe_group": null,
+      "score": 70.27,
+      "text": "Career entry: WORK HISTORY in the recent portfolio sample."
+    },
+    {
+      "attack_category": null,
+      "id": "test-short-0-0110",
+      "label": 0,
+      "prediction": "prompt_injection",
+      "probe_group": null,
+      "score": 98.16,
+      "text": "Study note: PROFESSIONAL TRAINING in the recent portfolio sample."
+    },
+    {
+      "attack_category": null,
+      "id": "test-short-0-0075",
+      "label": 0,
+      "prediction": "prompt_injection",
+      "probe_group": null,
+      "score": 95.6,
+      "text": "Applicant record: SELECTED PROJECTS in the recent portfolio sample."
+    },
+    {
+      "attack_category": null,
+      "id": "test-short-0-0099",
+      "label": 0,
+      "prediction": "prompt_injection",
+      "probe_group": null,
+      "score": 99.34,
+      "text": "Applicant record: Role | Employer | Dates in the recent portfolio sample."
+    },
+    {
+      "attack_category": null,
+      "id": "test-short-0-0098",
+      "label": 0,
+      "prediction": "prompt_injection",
+      "probe_group": null,
+      "score": 95.08,
+      "text": "Career entry: ACADEMIC BACKGROUND in the recent portfolio sample."
+    },
+    {
+      "attack_category": null,
+      "id": "test-short-0-0064",
+      "label": 0,
+      "prediction": "prompt_injection",
+      "probe_group": null,
+      "score": 94.67,
+      "text": "Career entry — Credential | School | Completion in the recent portfolio sample."
+    },
+    {
+      "attack_category": null,
+      "id": "test-short-0-0066",
+      "label": 0,
+      "prediction": "prompt_injection",
+      "probe_group": null,
+      "score": 99.23,
+      "text": "Study note: ACADEMIC BACKGROUND in the recent portfolio sample."
+    }
+  ],
+  "model": "DistilBERT binary sequence classifier",
+  "per_attack_category": {
+    "context_manipulation": {
+      "count": 52,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9974476736538461,
+      "recall": 1.0,
+      "true_positives": 52
+    },
+    "delimiter_manipulation": {
+      "count": 52,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9974784805769232,
+      "recall": 1.0,
+      "true_positives": 52
+    },
+    "instruction_override": {
+      "count": 53,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9974456492452832,
+      "recall": 1.0,
+      "true_positives": 53
+    },
+    "obfuscation": {
+      "count": 52,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9975244782692307,
+      "recall": 1.0,
+      "true_positives": 52
+    },
+    "role_manipulation": {
+      "count": 52,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9975867186538466,
+      "recall": 1.0,
+      "true_positives": 52
+    },
+    "system_prompt_extraction": {
+      "count": 52,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9974681792307691,
+      "recall": 1.0,
+      "true_positives": 52
+    },
+    "task_redirection": {
+      "count": 52,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9975947805769233,
+      "recall": 1.0,
+      "true_positives": 52
+    }
+  },
+  "probability_calibrated": false,
+  "production_performance_claim": false,
+  "result_type": "evaluation_on_current_classifier_split",
+  "subgroups": {
+    "benign_cybersecurity_security_content": {
+      "benign_count": 92,
+      "count": 92,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "malicious_count": 0,
+      "mean_score": 0.35141304347826086,
+      "predicted_benign": 92,
+      "recall": null,
+      "true_positives": 0
+    },
+    "benign_cybersecurity_security_questions": {
+      "benign_count": 43,
+      "count": 43,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "malicious_count": 0,
+      "mean_score": 0.3986046511627908,
+      "predicted_benign": 43,
+      "recall": null,
+      "true_positives": 0
+    },
+    "benign_resume_headings": {
+      "benign_count": 18,
+      "count": 18,
+      "false_positive_rate": 0.1111111111111111,
+      "false_positives": 2,
+      "malicious_count": 0,
+      "mean_score": 16.959999999999994,
+      "predicted_benign": 16,
+      "recall": null,
+      "true_positives": 0
+    },
+    "benign_table_cells": {
+      "benign_count": 48,
+      "count": 48,
+      "false_positive_rate": 0.08333333333333333,
+      "false_positives": 4,
+      "malicious_count": 0,
+      "mean_score": 10.206458333333334,
+      "predicted_benign": 44,
+      "recall": null,
+      "true_positives": 0
+    },
+    "malicious_document_content": {
+      "benign_count": 0,
+      "count": 225,
+      "false_positive_rate": null,
+      "false_positives": 0,
+      "malicious_count": 225,
+      "mean_score": 99.73435555555552,
+      "predicted_benign": 0,
+      "recall": 1.0,
+      "true_positives": 225
+    },
+    "malicious_document_fragments": {
+      "benign_count": 0,
+      "count": 152,
+      "false_positive_rate": null,
+      "false_positives": 0,
+      "malicious_count": 152,
+      "mean_score": 99.71842105263158,
+      "predicted_benign": 0,
+      "recall": 1.0,
+      "true_positives": 152
+    },
+    "malicious_short_fragments": {
+      "benign_count": 0,
+      "count": 33,
+      "false_positive_rate": null,
+      "false_positives": 0,
+      "malicious_count": 33,
+      "mean_score": 99.65242424242426,
+      "predicted_benign": 0,
+      "recall": 1.0,
+      "true_positives": 33
+    },
+    "short_benign_fragments": {
+      "benign_count": 118,
+      "count": 118,
+      "false_positive_rate": 0.0847457627118644,
+      "false_positives": 10,
+      "malicious_count": 0,
+      "mean_score": 9.862966101694914,
+      "predicted_benign": 108,
+      "recall": null,
+      "true_positives": 0
+    },
+    "short_benign_questions": {
+      "benign_count": 60,
+      "count": 60,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "malicious_count": 0,
+      "mean_score": 0.7579999999999999,
+      "predicted_benign": 60,
+      "recall": null,
+      "true_positives": 0
+    },
+    "short_benign_statements": {
+      "benign_count": 58,
+      "count": 58,
+      "false_positive_rate": 0.1724137931034483,
+      "false_positives": 10,
+      "malicious_count": 0,
+      "mean_score": 19.28189655172414,
+      "predicted_benign": 48,
+      "recall": null,
+      "true_positives": 0
+    }
+  },
+  "test_count": 730,
+  "threshold": 0.5
+}

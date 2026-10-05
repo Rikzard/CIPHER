@@ -1,6 +1,18 @@
 # Local embedding resources
 
-The semantic detector is an optional local component used alongside `RuleDetector`. Project-wide development dependencies are declared in the root `pyproject.toml` and locked in `uv.lock`; `backend/detector/embeddings/requirements.txt` remains available for standalone provisioning commands. The detector uses a local Sentence Transformer, the version-controlled JSONL dataset, and a generated local FAISS index. It does not download or rebuild resources during API requests. The current model is `sentence-transformers/all-MiniLM-L6-v2`.
+The semantic detector is a local component used alongside `RuleDetector`. Its Python runtime requires the `embeddings` extra in the development/runtime environment. Project dependencies are declared in the root `pyproject.toml` and locked in `uv.lock`; `backend/detector/embeddings/requirements.txt` remains available for standalone provisioning workflows. From the repository root, install the development environment with:
+
+```powershell
+uv sync --extra embeddings
+```
+
+Start CIPHER with:
+
+```powershell
+uv run uvicorn backend.app:app --reload
+```
+
+The detector uses a local Sentence Transformer, the version-controlled JSONL dataset, and a generated local FAISS index. It does not install Python dependencies, download model files, or rebuild the index during API startup or requests. The current model is `sentence-transformers/all-MiniLM-L6-v2`.
 
 Run the backend test suite with the canonical command from the repository root:
 
@@ -13,7 +25,7 @@ uv run python -m unittest discover -s backend/tests -v
 From the repository root, download the model into the ignored `models/` directory:
 
 ```powershell
-uv run --with-requirements backend/detector/embeddings/requirements.txt hf download sentence-transformers/all-MiniLM-L6-v2 --local-dir models/all-MiniLM-L6-v2
+uv run hf download sentence-transformers/all-MiniLM-L6-v2 --local-dir models/all-MiniLM-L6-v2
 ```
 
 This is the only network step. Keep the resulting model directory local; do not commit model weights. The build and validation commands below load only from that local directory.
@@ -46,13 +58,13 @@ The model name and path used to build an index must match those used later by th
 Build (or safely replace) the local index and its metadata:
 
 ```powershell
-uv run --offline --with-requirements backend/detector/embeddings/requirements.txt -- python -m backend.detector.embeddings.provision build
+uv run --offline python -m backend.detector.embeddings.provision build
 ```
 
 Validate the model, dataset, index, metadata, dimensions, and a sample nearest-neighbor query:
 
 ```powershell
-uv run --offline --with-requirements backend/detector/embeddings/requirements.txt -- python -m backend.detector.embeddings.provision validate
+uv run --offline python -m backend.detector.embeddings.provision validate
 ```
 
 Both commands fail with a concise error and a nonzero exit status if a required local resource is missing or incompatible. `build` loads the model from the configured local directory, canonicalizes the dataset examples with CIPHER's normalizer, generates embeddings, creates a cosine-similarity FAISS index, writes metadata, reloads the saved resources, and validates them. Re-running `build` with the same model, dataset, configuration, and dependency versions produces the same metadata and replaces the generated index.
@@ -79,7 +91,7 @@ The current similarity threshold remains uncalibrated. Provisioning verifies con
 Threshold evaluation uses the separate project datasets under `data/evaluation/`, not the malicious-only FAISS reference corpus. `calibration.jsonl` includes benign hard negatives and malicious examples for score analysis; `test.jsonl` is held out and must not be used to choose a threshold. Validate schema and exact/canonical separation (using CIPHER's normalizer) from the repository root with:
 
 ```powershell
-uv run --offline --with-requirements backend/detector/embeddings/requirements.txt -- python -m backend.evaluation.datasets
+uv run --offline python -m backend.evaluation.datasets
 ```
 
 The fixtures are small and hand-authored, not representative of all real-world prompt injections. The threshold remains uncalibrated; see [EVALUATION.md](EVALUATION.md) for the planned Step 13C analysis and limitations.

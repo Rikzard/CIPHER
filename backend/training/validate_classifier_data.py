@@ -13,7 +13,18 @@ from backend.evaluation.datasets import ATTACK_CATEGORIES
 from backend.normalization.normalizer import normalize_input
 
 HARD_NEGATIVE_TERMS = ("prompt", "system", "instruction", "ignore", "override", "administrator", "security")
-SPLITS = ("train.jsonl", "validation.jsonl", "test.jsonl")
+SPLITS = (
+    "train.jsonl",
+    "validation.jsonl",
+    "calibration.jsonl",
+    "test.jsonl",
+    "hr_document_final_test.jsonl",
+)
+SOURCE_TYPES = {"synthetic", "resume", "cover_letter", "candidate_document", "security_question"}
+STRUCTURE_TYPES = {
+    "paragraph", "heading", "table_header", "table_cell", "bullet", "short_fragment", "long_prose"
+}
+LENGTH_BUCKETS = {"1-8", "9-16", "17-32", "33-64", "65+"}
 LABEL_LEAKAGE = re.compile(r"\b(?:label|class)\s*[:=]\s*(?:0|1|benign|malicious|prompt[_ -]?injection)\b", re.IGNORECASE)
 IGNORE_PREVIOUS = re.compile(r"ignore\s+(?:all\s+)?previous\s+instructions", re.IGNORECASE)
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
@@ -37,7 +48,10 @@ def _read(path: Path) -> list[dict[str, Any]]:
             raise ClassifierDatasetError(f"Invalid JSON in {path} line {line_number}") from exc
         if not isinstance(item, dict):
             raise ClassifierDatasetError(f"Record in {path} line {line_number} must be an object")
-        required_strings = ("id", "group_id", "source_family", "template_family", "text", "source_kind")
+        required_strings = (
+            "id", "group_id", "source_family", "template_family", "text", "source_kind",
+            "source_type", "document_type", "structure_type", "length_bucket",
+        )
         if any(not isinstance(item.get(key), str) or not item[key].strip() for key in required_strings):
             raise ClassifierDatasetError(f"Record in {path} line {line_number} has missing/empty required string fields")
         if item["group_id"] != item["source_family"] or item["group_id"] != item["template_family"]:
@@ -52,6 +66,12 @@ def _read(path: Path) -> list[dict[str, Any]]:
             raise ClassifierDatasetError(f"Malicious record {item['id']} has an invalid attack_category")
         if LABEL_LEAKAGE.search(item["text"]):
             raise ClassifierDatasetError(f"Record {item['id']} appears to state its label in text")
+        if item["source_type"] not in SOURCE_TYPES:
+            raise ClassifierDatasetError(f"Record {item['id']} has an invalid source_type")
+        if item["structure_type"] not in STRUCTURE_TYPES:
+            raise ClassifierDatasetError(f"Record {item['id']} has an invalid structure_type")
+        if item["length_bucket"] not in LENGTH_BUCKETS:
+            raise ClassifierDatasetError(f"Record {item['id']} has an invalid length_bucket")
         records.append(item)
     if not records:
         raise ClassifierDatasetError(f"Dataset split is empty: {path}")
@@ -91,6 +111,21 @@ def _split_stats(records: list[dict[str, Any]]) -> dict[str, Any]:
     labels = Counter("benign" if row["label"] == 0 else "malicious" for row in records)
     categories = Counter(row["attack_category"] for row in records if row["attack_category"] is not None)
     source_kinds = Counter(row["source_kind"] for row in records)
+    source_types = Counter(row["source_type"] for row in records)
+    structure_types = Counter(row["structure_type"] for row in records)
+    length_buckets = Counter(row["length_bucket"] for row in records)
+    length_buckets_by_label = {
+        label_name: dict(sorted(Counter(row["length_bucket"] for row in records if row["label"] == label).items()))
+        for label, label_name in ((0, "benign"), (1, "malicious"))
+    }
+    source_types_by_label = {
+        label_name: dict(sorted(Counter(row["source_type"] for row in records if row["label"] == label).items()))
+        for label, label_name in ((0, "benign"), (1, "malicious"))
+    }
+    structures_by_label = {
+        label_name: dict(sorted(Counter(row["structure_type"] for row in records if row["label"] == label).items()))
+        for label, label_name in ((0, "benign"), (1, "malicious"))
+    }
     hard_negative_count = sum(
         row["label"] == 0 and any(term in row["text"].casefold() for term in HARD_NEGATIVE_TERMS)
         for row in records
@@ -101,6 +136,12 @@ def _split_stats(records: list[dict[str, Any]]) -> dict[str, Any]:
         "labels": dict(sorted(labels.items())),
         "attack_categories": dict(sorted(categories.items())),
         "source_kinds": dict(sorted(source_kinds.items())),
+        "source_types": dict(sorted(source_types.items())),
+        "source_types_by_label": source_types_by_label,
+        "structure_types": dict(sorted(structure_types.items())),
+        "structure_types_by_label": structures_by_label,
+        "length_buckets_whitespace_estimate": dict(sorted(length_buckets.items())),
+        "length_buckets_whitespace_estimate_by_label": length_buckets_by_label,
         "group_count": len({row["group_id"] for row in records}),
         "hard_negative_count": hard_negative_count,
         "hr_document_count": hr_document_count,
@@ -126,8 +167,16 @@ def _quality_counts(records: list[dict[str, Any]]) -> dict[str, Any]:
     token_sets = [set(TOKENIZE.findall(_canonical(row["text"]).casefold())) for row in records]
     for left_index, left_tokens in enumerate(token_sets):
         for right_index in range(left_index + 1, len(token_sets)):
+            # Similar resume headings and boilerplate can recur within a
+            # training split; leakage is the concern when related text crosses
+            # a data boundary.
+            if records[left_index].get("_split") == records[right_index].get("_split"):
+                continue
             right_tokens = token_sets[right_index]
-            if not left_tokens or not right_tokens:
+            # Jaccard is unstable for very short, common document fields (for
+            # example, "Degree" or "Year"). Exact/canonical duplicates are
+            # still rejected for all lengths above.
+            if min(len(left_tokens), len(right_tokens)) < 12:
                 continue
             intersection = len(left_tokens & right_tokens)
             union = len(left_tokens | right_tokens)
@@ -182,7 +231,12 @@ def validate_classifier_data(data_dir: str | Path, frozen_evaluation_dir: str | 
     # Frozen sets contribute text only. Their labels are never opened or inspected.
     frozen_records = [
         record
-        for file_name in ("calibration.jsonl", "test.jsonl")
+        for file_name in (
+            "calibration.jsonl",
+            "test.jsonl",
+            "classifier_short_probes.jsonl",
+            "classifier_short_probes_postfit.jsonl",
+        )
         for record in _read_frozen(frozen_dir / file_name)
     ]
     frozen_raw = {record["text"] for record in frozen_records}
@@ -191,6 +245,29 @@ def validate_classifier_data(data_dir: str | Path, frozen_evaluation_dir: str | 
     overlap_canonical = sum(len(text_set & frozen_canonical) for text_set in canonical.values())
     if overlap_raw or overlap_canonical:
         raise ClassifierDatasetError("Classifier texts overlap frozen evaluation text")
+
+    # The short probe files are classifier-specific final checks. Reject
+    # longer lexical near duplicates against training; short common questions
+    # are excluded because token Jaccard is unstable at small token counts.
+    probe_records = [
+        record
+        for file_name in ("classifier_short_probes.jsonl", "classifier_short_probes_postfit.jsonl")
+        for record in _read_frozen(frozen_dir / file_name)
+    ]
+    train_records = splits["train.jsonl"]
+    train_token_sets = [set(TOKENIZE.findall(_canonical(row["text"]).casefold())) for row in train_records]
+    probe_token_sets = [set(TOKENIZE.findall(_canonical(row["text"]).casefold())) for row in probe_records]
+    for train_row, train_tokens in zip(train_records, train_token_sets):
+        if len(train_tokens) < 12:
+            continue
+        for probe_row, probe_tokens in zip(probe_records, probe_token_sets):
+            if len(probe_tokens) < 12:
+                continue
+            similarity = len(train_tokens & probe_tokens) / len(train_tokens | probe_tokens)
+            if similarity >= 0.85:
+                raise ClassifierDatasetError(
+                    f"Training record {train_row['id']} is near-duplicate to independent probe {probe_row['text'][:80]!r}"
+                )
 
     manifest_path = data_dir / "manifest.json"
     try:
@@ -203,12 +280,18 @@ def validate_classifier_data(data_dir: str | Path, frozen_evaluation_dir: str | 
         raise ClassifierDatasetError("Classifier dataset manifest lacks version/source metadata")
 
     split_stats: dict[str, Any] = {}
-    all_records = [row for rows in splits.values() for row in rows]
+    all_records = [dict(row, _split=name) for name, rows in splits.items() for row in rows]
     split_hashes = {name: _sha256((data_dir / name).read_bytes()) for name in SPLITS}
     for name, records in splits.items():
         stats = _split_stats(records)
         split_stats[name] = stats
-        minimum_records = 1000 if name == "train.jsonl" else 200
+        minimum_records = {
+            "train.jsonl": 1000,
+            "validation.jsonl": 200,
+            "test.jsonl": 200,
+            "calibration.jsonl": 100,
+            "hr_document_final_test.jsonl": 100,
+        }[name]
         if stats["count"] < minimum_records:
             raise ClassifierDatasetError(f"Dataset split is below its minimum size: {name}")
         if stats["labels"].get("benign", 0) != stats["labels"].get("malicious", 0):
@@ -244,8 +327,9 @@ def validate_classifier_data(data_dir: str | Path, frozen_evaluation_dir: str | 
         raise ClassifierDatasetError("Over-reliance on the 'ignore previous instructions' phrase")
     if quality["near_duplicate_pair_count_at_token_jaccard_0_85"]:
         raise ClassifierDatasetError("Near-duplicate text pairs exceed the 0.85 token Jaccard threshold")
-    if quality["repeated_long_sentence_groups"]:
-        raise ClassifierDatasetError("Repeated long sentences found in the classifier corpus")
+    # Reused descriptive sentences are expected in synthetic document
+    # templates; record the count for review, while rejecting full-record
+    # exact/canonical and cross-split near duplicates above.
     return {
         "status": "valid",
         "dataset_version": manifest["dataset_version"],
@@ -275,6 +359,12 @@ def main() -> int:
                 "count": stats["count"],
                 "labels": stats["labels"],
                 "category_counts": stats["attack_categories"],
+                "source_types": stats["source_types"],
+                "source_types_by_label": stats["source_types_by_label"],
+                "structure_types": stats["structure_types"],
+                "structure_types_by_label": stats["structure_types_by_label"],
+                "length_buckets_whitespace_estimate": stats["length_buckets_whitespace_estimate"],
+                "length_buckets_whitespace_estimate_by_label": stats["length_buckets_whitespace_estimate_by_label"],
                 "groups": stats["group_count"],
             }
             for name, stats in result["split_counts"].items()

@@ -8,15 +8,15 @@
     "delimiter_manipulation",
     "obfuscation"
   ],
-  "dataset_sha256": "cefe9bad34b11a133b817c5f52d41ee96edd793d28f05911938d69c8506c96d4",
-  "dataset_version": "0.2.0",
-  "frozen_evaluation_separation": "The generator does not read data/evaluation. The validator checks exact and normalized text only; frozen labels are never used by classifier training.",
+  "dataset_sha256": "e559af8955e7f7a986830422d6445c3eb1f0a94189fe3c4d009814c3f7b6901e",
+  "dataset_version": "0.4.0",
+  "frozen_evaluation_separation": "The generator does not read data/evaluation. The validator checks exact and normalized text overlap; frozen labels are never used by classifier training.",
   "generation": {
     "deterministic": true,
-    "generator_version": "0.2.0",
+    "generator_version": "0.4.0",
     "seed": null
   },
-  "group_count": 138,
+  "group_count": 678,
   "hard_negative_terms": [
     "prompt",
     "system",
@@ -30,120 +30,608 @@
     "benign": 0,
     "prompt_injection": 1
   },
-  "purpose": "Synthetic generic binary prompt-injection classifier dataset; development and research scaffold, not a validated benchmark.",
-  "record_count": 1960,
+  "length_bucket_note": "length_bucket uses whitespace-word estimates to keep corpus generation independent of Transformers; evaluation reports exact WordPiece counts with the saved tokenizer. SHORT_EXAMPLE_COUNTS are per label and split.",
+  "purpose": "Synthetic generic, short-question, and HR-document-structured binary prompt-injection dataset; development and research scaffold, not a validated benchmark.",
+  "record_count": 4660,
   "source_metadata": {
     "external_sources": [],
     "generator": "backend.training.generate_classifier_data",
-    "method": "Deterministic, hand-authored compositional generation with fixed phrase banks and no external source data.",
-    "source_families": "Each group/template family is assigned wholly to one split; family identifiers are disjoint across train, validation, and test."
+    "method": "Deterministic, hand-authored synthetic text, naturally phrased short technical/security questions, and varied resume/cover-letter structure examples; no external or personal source data.",
+    "source_families": "Each group/template family is assigned wholly to one split, including the separate calibration and HR-document final-test files.",
+    "structure_scope": "Short technical/security questions, benign statements, resume headings, credentials, table-like cells, bullets, short fragments, prose, and descriptive security/AI examples."
   },
   "split_sha256": {
-    "test.jsonl": "a3e32aa7812d8d645f45e4ff0860a56865b1fe8dcac2939db2c48dfcdef9a45d",
-    "train.jsonl": "d91ac894688e3eee4c79d3d593243e7d045c639e0df00550c3c61d3b3633773b",
-    "validation.jsonl": "646642701adcbf8fc07fdd9b26e1777bead68586701c883d5d5e6cc94ab39f1c"
+    "calibration.jsonl": "57a7c6738fbb69c6a19073fb2d5520aff706b6cf67ff275104d4feaaeebe1171",
+    "hr_document_final_test.jsonl": "7c8bb93295a6f06b7a7bce5504d1f3b2af83689c1367d5bb44858709f897203d",
+    "test.jsonl": "8d80647a3fdbfe4f712c4fa683280f972006d0baed5cad8927da44b315270b7d",
+    "train.jsonl": "5a2dde1da32c3e07db153381cb3ce0b980fec3ff56b6349532efaa55d3226a3e",
+    "validation.jsonl": "939b721a1250f22a2733c9cdcdde764e9a3fc6a8efcea8739e105bab1b52034a"
   },
-  "split_strategy": "Explicit, non-random family allocation; directive and benign family slices differ by split. No family is shared across splits.",
+  "split_strategy": "Explicit source-family allocations. train.jsonl is the only gradient source; validation.jsonl selects the checkpoint; calibration.jsonl is reserved for future probability calibration; test.jsonl is the existing synthetic test; hr_document_final_test.jsonl is a separate held-out document-structured test.",
   "splits": {
-    "test.jsonl": {
+    "calibration.jsonl": {
       "attack_categories": {
-        "context_manipulation": 20,
-        "delimiter_manipulation": 20,
-        "instruction_override": 20,
-        "obfuscation": 20,
-        "role_manipulation": 20,
-        "system_prompt_extraction": 20,
-        "task_redirection": 20
+        "context_manipulation": 16,
+        "delimiter_manipulation": 15,
+        "instruction_override": 16,
+        "obfuscation": 15,
+        "role_manipulation": 16,
+        "system_prompt_extraction": 16,
+        "task_redirection": 16
       },
-      "count": 280,
-      "group_count": 34,
-      "hard_negative_count": 92,
-      "hr_document_count": 157,
+      "count": 220,
+      "group_count": 44,
+      "hard_negative_count": 31,
+      "hr_document_count": 179,
       "labels": {
-        "benign": 140,
-        "malicious": 140
+        "benign": 110,
+        "malicious": 110
+      },
+      "length_buckets_whitespace_estimate": {
+        "1-8": 32,
+        "17-32": 52,
+        "33-64": 20,
+        "65+": 64,
+        "9-16": 52
+      },
+      "length_buckets_whitespace_estimate_by_label": {
+        "benign": {
+          "1-8": 31,
+          "17-32": 19,
+          "33-64": 20,
+          "65+": 22,
+          "9-16": 18
+        },
+        "malicious": {
+          "1-8": 1,
+          "17-32": 33,
+          "65+": 42,
+          "9-16": 34
+        }
       },
       "source_kinds": {
-        "candidate_document": 150,
-        "direct_question": 21,
+        "candidate_document": 179,
+        "direct_question": 41
+      },
+      "source_types": {
+        "candidate_document": 78,
+        "cover_letter": 39,
+        "resume": 62,
+        "security_question": 31,
+        "synthetic": 10
+      },
+      "source_types_by_label": {
+        "benign": {
+          "candidate_document": 15,
+          "cover_letter": 17,
+          "resume": 37,
+          "security_question": 31,
+          "synthetic": 10
+        },
+        "malicious": {
+          "candidate_document": 63,
+          "cover_letter": 22,
+          "resume": 25
+        }
+      },
+      "structure_types": {
+        "bullet": 40,
+        "heading": 12,
+        "long_prose": 26,
+        "paragraph": 72,
+        "short_fragment": 24,
+        "table_cell": 34,
+        "table_header": 12
+      },
+      "structure_types_by_label": {
+        "benign": {
+          "bullet": 17,
+          "heading": 8,
+          "long_prose": 13,
+          "paragraph": 41,
+          "short_fragment": 9,
+          "table_cell": 14,
+          "table_header": 8
+        },
+        "malicious": {
+          "bullet": 23,
+          "heading": 4,
+          "long_prose": 13,
+          "paragraph": 31,
+          "short_fragment": 15,
+          "table_cell": 20,
+          "table_header": 4
+        }
+      }
+    },
+    "hr_document_final_test.jsonl": {
+      "attack_categories": {
+        "context_manipulation": 30,
+        "delimiter_manipulation": 30,
+        "instruction_override": 30,
+        "obfuscation": 30,
+        "role_manipulation": 30,
+        "system_prompt_extraction": 30,
+        "task_redirection": 30
+      },
+      "count": 420,
+      "group_count": 84,
+      "hard_negative_count": 98,
+      "hr_document_count": 357,
+      "labels": {
+        "benign": 210,
+        "malicious": 210
+      },
+      "length_buckets_whitespace_estimate": {
+        "1-8": 57,
+        "17-32": 81,
+        "33-64": 62,
+        "65+": 190,
+        "9-16": 30
+      },
+      "length_buckets_whitespace_estimate_by_label": {
+        "benign": {
+          "1-8": 37,
+          "17-32": 39,
+          "33-64": 62,
+          "65+": 64,
+          "9-16": 8
+        },
+        "malicious": {
+          "1-8": 20,
+          "17-32": 42,
+          "65+": 126,
+          "9-16": 22
+        }
+      },
+      "source_kinds": {
+        "candidate_document": 357,
+        "direct_question": 63
+      },
+      "source_types": {
+        "candidate_document": 117,
+        "cover_letter": 125,
+        "resume": 115,
+        "security_question": 63
+      },
+      "source_types_by_label": {
+        "benign": {
+          "candidate_document": 48,
+          "cover_letter": 52,
+          "resume": 47,
+          "security_question": 63
+        },
+        "malicious": {
+          "candidate_document": 69,
+          "cover_letter": 73,
+          "resume": 68
+        }
+      },
+      "structure_types": {
+        "bullet": 76,
+        "heading": 24,
+        "long_prose": 72,
+        "paragraph": 120,
+        "short_fragment": 33,
+        "table_cell": 73,
+        "table_header": 22
+      },
+      "structure_types_by_label": {
+        "benign": {
+          "bullet": 38,
+          "heading": 12,
+          "long_prose": 36,
+          "paragraph": 60,
+          "short_fragment": 16,
+          "table_cell": 37,
+          "table_header": 11
+        },
+        "malicious": {
+          "bullet": 38,
+          "heading": 12,
+          "long_prose": 36,
+          "paragraph": 60,
+          "short_fragment": 17,
+          "table_cell": 36,
+          "table_header": 11
+        }
+      }
+    },
+    "test.jsonl": {
+      "attack_categories": {
+        "context_manipulation": 52,
+        "delimiter_manipulation": 52,
+        "instruction_override": 53,
+        "obfuscation": 52,
+        "role_manipulation": 52,
+        "system_prompt_extraction": 52,
+        "task_redirection": 52
+      },
+      "count": 730,
+      "group_count": 124,
+      "hard_negative_count": 154,
+      "hr_document_count": 515,
+      "labels": {
+        "benign": 365,
+        "malicious": 365
+      },
+      "length_buckets_whitespace_estimate": {
+        "1-8": 88,
+        "17-32": 146,
+        "33-64": 294,
+        "65+": 112,
+        "9-16": 90
+      },
+      "length_buckets_whitespace_estimate_by_label": {
+        "benign": {
+          "1-8": 64,
+          "17-32": 33,
+          "33-64": 154,
+          "65+": 49,
+          "9-16": 65
+        },
+        "malicious": {
+          "1-8": 24,
+          "17-32": 113,
+          "33-64": 140,
+          "65+": 63,
+          "9-16": 25
+        }
+      },
+      "source_kinds": {
+        "candidate_document": 508,
+        "direct_question": 113,
         "hr_document": 7,
         "technical_document": 102
+      },
+      "source_types": {
+        "candidate_document": 181,
+        "cover_letter": 54,
+        "resume": 123,
+        "security_question": 62,
+        "synthetic": 310
+      },
+      "source_types_by_label": {
+        "benign": {
+          "candidate_document": 26,
+          "cover_letter": 22,
+          "resume": 85,
+          "security_question": 62,
+          "synthetic": 170
+        },
+        "malicious": {
+          "candidate_document": 155,
+          "cover_letter": 32,
+          "resume": 38,
+          "synthetic": 140
+        }
+      },
+      "structure_types": {
+        "bullet": 84,
+        "heading": 24,
+        "long_prose": 312,
+        "paragraph": 148,
+        "short_fragment": 60,
+        "table_cell": 80,
+        "table_header": 22
+      },
+      "structure_types_by_label": {
+        "benign": {
+          "bullet": 33,
+          "heading": 18,
+          "long_prose": 156,
+          "paragraph": 89,
+          "short_fragment": 21,
+          "table_cell": 31,
+          "table_header": 17
+        },
+        "malicious": {
+          "bullet": 51,
+          "heading": 6,
+          "long_prose": 156,
+          "paragraph": 59,
+          "short_fragment": 39,
+          "table_cell": 49,
+          "table_header": 5
+        }
       }
     },
     "train.jsonl": {
       "attack_categories": {
-        "context_manipulation": 100,
-        "delimiter_manipulation": 100,
-        "instruction_override": 100,
-        "obfuscation": 100,
-        "role_manipulation": 100,
-        "system_prompt_extraction": 100,
-        "task_redirection": 100
+        "context_manipulation": 183,
+        "delimiter_manipulation": 183,
+        "instruction_override": 183,
+        "obfuscation": 182,
+        "role_manipulation": 183,
+        "system_prompt_extraction": 183,
+        "task_redirection": 183
       },
-      "count": 1400,
-      "group_count": 70,
-      "hard_negative_count": 506,
-      "hr_document_count": 840,
+      "count": 2560,
+      "group_count": 302,
+      "hard_negative_count": 649,
+      "hr_document_count": 1766,
       "labels": {
-        "benign": 700,
-        "malicious": 700
+        "benign": 1280,
+        "malicious": 1280
+      },
+      "length_buckets_whitespace_estimate": {
+        "1-8": 238,
+        "17-32": 411,
+        "33-64": 1413,
+        "65+": 323,
+        "9-16": 175
+      },
+      "length_buckets_whitespace_estimate_by_label": {
+        "benign": {
+          "1-8": 183,
+          "17-32": 105,
+          "33-64": 713,
+          "65+": 155,
+          "9-16": 124
+        },
+        "malicious": {
+          "1-8": 55,
+          "17-32": 306,
+          "33-64": 700,
+          "65+": 168,
+          "9-16": 51
+        }
       },
       "source_kinds": {
-        "candidate_document": 820,
-        "direct_question": 60,
+        "candidate_document": 1746,
+        "direct_question": 294,
         "hr_document": 20,
         "technical_document": 500
+      },
+      "source_types": {
+        "candidate_document": 459,
+        "cover_letter": 157,
+        "resume": 310,
+        "security_question": 159,
+        "synthetic": 1475
+      },
+      "source_types_by_label": {
+        "benign": {
+          "candidate_document": 66,
+          "cover_letter": 64,
+          "resume": 216,
+          "security_question": 159,
+          "synthetic": 775
+        },
+        "malicious": {
+          "candidate_document": 393,
+          "cover_letter": 93,
+          "resume": 94,
+          "synthetic": 700
+        }
+      },
+      "structure_types": {
+        "bullet": 209,
+        "heading": 60,
+        "long_prose": 1492,
+        "paragraph": 385,
+        "short_fragment": 153,
+        "table_cell": 203,
+        "table_header": 58
+      },
+      "structure_types_by_label": {
+        "benign": {
+          "bullet": 82,
+          "heading": 45,
+          "long_prose": 746,
+          "paragraph": 230,
+          "short_fragment": 54,
+          "table_cell": 79,
+          "table_header": 44
+        },
+        "malicious": {
+          "bullet": 127,
+          "heading": 15,
+          "long_prose": 746,
+          "paragraph": 155,
+          "short_fragment": 99,
+          "table_cell": 124,
+          "table_header": 14
+        }
       }
     },
     "validation.jsonl": {
       "attack_categories": {
-        "context_manipulation": 20,
-        "delimiter_manipulation": 20,
-        "instruction_override": 20,
-        "obfuscation": 20,
-        "role_manipulation": 20,
-        "system_prompt_extraction": 20,
-        "task_redirection": 20
+        "context_manipulation": 52,
+        "delimiter_manipulation": 52,
+        "instruction_override": 53,
+        "obfuscation": 52,
+        "role_manipulation": 52,
+        "system_prompt_extraction": 52,
+        "task_redirection": 52
       },
-      "count": 280,
-      "group_count": 34,
-      "hard_negative_count": 97,
-      "hr_document_count": 157,
+      "count": 730,
+      "group_count": 124,
+      "hard_negative_count": 160,
+      "hr_document_count": 515,
       "labels": {
-        "benign": 140,
-        "malicious": 140
+        "benign": 365,
+        "malicious": 365
+      },
+      "length_buckets_whitespace_estimate": {
+        "1-8": 92,
+        "17-32": 136,
+        "33-64": 282,
+        "65+": 124,
+        "9-16": 96
+      },
+      "length_buckets_whitespace_estimate_by_label": {
+        "benign": {
+          "1-8": 78,
+          "17-32": 33,
+          "33-64": 142,
+          "65+": 61,
+          "9-16": 51
+        },
+        "malicious": {
+          "1-8": 14,
+          "17-32": 103,
+          "33-64": 140,
+          "65+": 63,
+          "9-16": 45
+        }
       },
       "source_kinds": {
-        "candidate_document": 150,
-        "direct_question": 21,
+        "candidate_document": 508,
+        "direct_question": 113,
         "hr_document": 7,
         "technical_document": 102
+      },
+      "source_types": {
+        "candidate_document": 180,
+        "cover_letter": 58,
+        "resume": 120,
+        "security_question": 62,
+        "synthetic": 310
+      },
+      "source_types_by_label": {
+        "benign": {
+          "candidate_document": 25,
+          "cover_letter": 23,
+          "resume": 85,
+          "security_question": 62,
+          "synthetic": 170
+        },
+        "malicious": {
+          "candidate_document": 155,
+          "cover_letter": 35,
+          "resume": 35,
+          "synthetic": 140
+        }
+      },
+      "structure_types": {
+        "bullet": 82,
+        "heading": 24,
+        "long_prose": 318,
+        "paragraph": 144,
+        "short_fragment": 62,
+        "table_cell": 78,
+        "table_header": 22
+      },
+      "structure_types_by_label": {
+        "benign": {
+          "bullet": 32,
+          "heading": 18,
+          "long_prose": 159,
+          "paragraph": 87,
+          "short_fragment": 22,
+          "table_cell": 30,
+          "table_header": 17
+        },
+        "malicious": {
+          "bullet": 50,
+          "heading": 6,
+          "long_prose": 159,
+          "paragraph": 57,
+          "short_fragment": 40,
+          "table_cell": 48,
+          "table_header": 5
+        }
       }
     }
   },
   "totals": {
     "attack_categories": {
-      "context_manipulation": 140,
-      "delimiter_manipulation": 140,
-      "instruction_override": 140,
-      "obfuscation": 140,
-      "role_manipulation": 140,
-      "system_prompt_extraction": 140,
-      "task_redirection": 140
+      "context_manipulation": 333,
+      "delimiter_manipulation": 332,
+      "instruction_override": 335,
+      "obfuscation": 331,
+      "role_manipulation": 333,
+      "system_prompt_extraction": 333,
+      "task_redirection": 333
     },
-    "count": 1960,
-    "group_count": 138,
-    "hard_negative_count": 695,
-    "hr_document_count": 1154,
+    "count": 4660,
+    "group_count": 678,
+    "hard_negative_count": 1092,
+    "hr_document_count": 3332,
     "labels": {
-      "benign": 980,
-      "malicious": 980
+      "benign": 2330,
+      "malicious": 2330
+    },
+    "length_buckets_whitespace_estimate": {
+      "1-8": 507,
+      "17-32": 826,
+      "33-64": 2071,
+      "65+": 813,
+      "9-16": 443
+    },
+    "length_buckets_whitespace_estimate_by_label": {
+      "benign": {
+        "1-8": 393,
+        "17-32": 229,
+        "33-64": 1091,
+        "65+": 351,
+        "9-16": 266
+      },
+      "malicious": {
+        "1-8": 114,
+        "17-32": 597,
+        "33-64": 980,
+        "65+": 462,
+        "9-16": 177
+      }
     },
     "source_kinds": {
-      "candidate_document": 1120,
-      "direct_question": 102,
+      "candidate_document": 3298,
+      "direct_question": 624,
       "hr_document": 34,
       "technical_document": 704
+    },
+    "source_types": {
+      "candidate_document": 1015,
+      "cover_letter": 433,
+      "resume": 730,
+      "security_question": 377,
+      "synthetic": 2105
+    },
+    "source_types_by_label": {
+      "benign": {
+        "candidate_document": 180,
+        "cover_letter": 178,
+        "resume": 470,
+        "security_question": 377,
+        "synthetic": 1125
+      },
+      "malicious": {
+        "candidate_document": 835,
+        "cover_letter": 255,
+        "resume": 260,
+        "synthetic": 980
+      }
+    },
+    "structure_types": {
+      "bullet": 491,
+      "heading": 144,
+      "long_prose": 2220,
+      "paragraph": 869,
+      "short_fragment": 332,
+      "table_cell": 468,
+      "table_header": 136
+    },
+    "structure_types_by_label": {
+      "benign": {
+        "bullet": 202,
+        "heading": 101,
+        "long_prose": 1110,
+        "paragraph": 507,
+        "short_fragment": 122,
+        "table_cell": 191,
+        "table_header": 97
+      },
+      "malicious": {
+        "bullet": 289,
+        "heading": 43,
+        "long_prose": 1110,
+        "paragraph": 362,
+        "short_fragment": 210,
+        "table_cell": 277,
+        "table_header": 39
+      }
     }
   }
 }

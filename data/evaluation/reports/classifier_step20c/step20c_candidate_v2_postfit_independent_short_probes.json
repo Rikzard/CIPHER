@@ -1,0 +1,307 @@
+{
+  "artifact_version": "distilbert-base-uncased-cipher-binary-0.4.0",
+  "checkpoint": "distilbert/distilbert-base-uncased",
+  "dataset": "D:\\CIPHER_2\\data\\evaluation\\classifier_short_probes_postfit.jsonl",
+  "dataset_version": "0.4.0",
+  "evaluation_data_counts": {
+    "attack_categories": {
+      "context_manipulation": 3,
+      "delimiter_manipulation": 3,
+      "instruction_override": 3,
+      "obfuscation": 2,
+      "role_manipulation": 3,
+      "system_prompt_extraction": 3,
+      "task_redirection": 3
+    },
+    "length_buckets_wordpieces": {
+      "1-8": 11,
+      "17-32": 0,
+      "33-64": 0,
+      "65+": 0,
+      "9-16": 29
+    },
+    "length_buckets_wordpieces_by_label": {
+      "benign": {
+        "1-8": 8,
+        "17-32": 0,
+        "33-64": 0,
+        "65+": 0,
+        "9-16": 12
+      },
+      "prompt_injection": {
+        "1-8": 3,
+        "17-32": 0,
+        "33-64": 0,
+        "65+": 0,
+        "9-16": 17
+      }
+    },
+    "source_types": {
+      "candidate_document": 20,
+      "resume": 6,
+      "security_question": 14
+    },
+    "source_types_by_label": {
+      "benign": {
+        "resume": 6,
+        "security_question": 14
+      },
+      "prompt_injection": {
+        "candidate_document": 20
+      }
+    },
+    "structure_types": {
+      "bullet": 4,
+      "heading": 1,
+      "paragraph": 19,
+      "short_fragment": 9,
+      "table_cell": 7
+    },
+    "structure_types_by_label": {
+      "benign": {
+        "bullet": 1,
+        "heading": 1,
+        "paragraph": 15,
+        "table_cell": 3
+      },
+      "prompt_injection": {
+        "bullet": 3,
+        "paragraph": 4,
+        "short_fragment": 9,
+        "table_cell": 4
+      }
+    }
+  },
+  "evaluation_dataset_sha256": "1bd7ab3ec3f0249fdf5d19bc340620ec3d5a4a81e34bfdc8ec5188661e544882",
+  "manual_examples": [
+    {
+      "chunk_count": 1,
+      "name": "normal_technical_question",
+      "prediction": "benign",
+      "prompt_injection_probability": 0.01139255,
+      "score": 1.14,
+      "token_count": 15
+    },
+    {
+      "chunk_count": 1,
+      "name": "benign_cybersecurity_question",
+      "prediction": "benign",
+      "prompt_injection_probability": 0.00728791,
+      "score": 0.73,
+      "token_count": 14
+    },
+    {
+      "chunk_count": 1,
+      "name": "obvious_prompt_injection",
+      "prediction": "prompt_injection",
+      "prompt_injection_probability": 0.98753786,
+      "score": 98.75,
+      "token_count": 11
+    },
+    {
+      "chunk_count": 1,
+      "name": "paraphrased_prompt_injection",
+      "prediction": "prompt_injection",
+      "prompt_injection_probability": 0.99582183,
+      "score": 99.58,
+      "token_count": 20
+    },
+    {
+      "chunk_count": 1,
+      "name": "resume_document_injection",
+      "prediction": "prompt_injection",
+      "prompt_injection_probability": 0.9974491,
+      "score": 99.74,
+      "token_count": 41
+    }
+  ],
+  "metrics": {
+    "accuracy": 1.0,
+    "confusion_matrix": {
+      "actual_benign": {
+        "predicted_benign": 20,
+        "predicted_prompt_injection": 0
+      },
+      "actual_prompt_injection": {
+        "predicted_benign": 0,
+        "predicted_prompt_injection": 20
+      }
+    },
+    "f1": 1.0,
+    "false_negative_rate": 0.0,
+    "false_positive_rate": 0.0,
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  "misclassified_example_count": 0,
+  "misclassified_examples": [],
+  "model": "DistilBERT binary sequence classifier",
+  "per_attack_category": {
+    "context_manipulation": {
+      "count": 3,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9958669766666667,
+      "recall": 1.0,
+      "true_positives": 3
+    },
+    "delimiter_manipulation": {
+      "count": 3,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9962208066666668,
+      "recall": 1.0,
+      "true_positives": 3
+    },
+    "instruction_override": {
+      "count": 3,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9919509266666666,
+      "recall": 1.0,
+      "true_positives": 3
+    },
+    "obfuscation": {
+      "count": 2,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.99451682,
+      "recall": 1.0,
+      "true_positives": 2
+    },
+    "role_manipulation": {
+      "count": 3,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.9924391733333332,
+      "recall": 1.0,
+      "true_positives": 3
+    },
+    "system_prompt_extraction": {
+      "count": 3,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.99512766,
+      "recall": 1.0,
+      "true_positives": 3
+    },
+    "task_redirection": {
+      "count": 3,
+      "false_negatives": 0,
+      "mean_prompt_injection_probability": 0.99645265,
+      "recall": 1.0,
+      "true_positives": 3
+    }
+  },
+  "probability_calibrated": false,
+  "production_performance_claim": false,
+  "result_type": "evaluation_on_independent_short_probe_set",
+  "subgroups": {
+    "benign_cybersecurity_security_content": {
+      "benign_count": 14,
+      "count": 14,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "malicious_count": 0,
+      "mean_score": 0.9278571428571428,
+      "predicted_benign": 14,
+      "recall": null,
+      "true_positives": 0
+    },
+    "benign_cybersecurity_security_questions": {
+      "benign_count": 4,
+      "count": 4,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "malicious_count": 0,
+      "mean_score": 0.8475,
+      "predicted_benign": 4,
+      "recall": null,
+      "true_positives": 0
+    },
+    "benign_resume_headings": {
+      "benign_count": 1,
+      "count": 1,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "malicious_count": 0,
+      "mean_score": 2.3,
+      "predicted_benign": 1,
+      "recall": null,
+      "true_positives": 0
+    },
+    "benign_table_cells": {
+      "benign_count": 3,
+      "count": 3,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "malicious_count": 0,
+      "mean_score": 1.7566666666666666,
+      "predicted_benign": 3,
+      "recall": null,
+      "true_positives": 0
+    },
+    "malicious_document_content": {
+      "benign_count": 0,
+      "count": 20,
+      "false_positive_rate": null,
+      "false_positives": 0,
+      "malicious_count": 20,
+      "mean_score": 99.4655,
+      "predicted_benign": 0,
+      "recall": 1.0,
+      "true_positives": 20
+    },
+    "malicious_document_fragments": {
+      "benign_count": 0,
+      "count": 20,
+      "false_positive_rate": null,
+      "false_positives": 0,
+      "malicious_count": 20,
+      "mean_score": 99.4655,
+      "predicted_benign": 0,
+      "recall": 1.0,
+      "true_positives": 20
+    },
+    "malicious_short_fragments": {
+      "benign_count": 0,
+      "count": 20,
+      "false_positive_rate": null,
+      "false_positives": 0,
+      "malicious_count": 20,
+      "mean_score": 99.4655,
+      "predicted_benign": 0,
+      "recall": 1.0,
+      "true_positives": 20
+    },
+    "short_benign_fragments": {
+      "benign_count": 20,
+      "count": 20,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "malicious_count": 0,
+      "mean_score": 2.2595,
+      "predicted_benign": 20,
+      "recall": null,
+      "true_positives": 0
+    },
+    "short_benign_questions": {
+      "benign_count": 14,
+      "count": 14,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "malicious_count": 0,
+      "mean_score": 0.9278571428571428,
+      "predicted_benign": 14,
+      "recall": null,
+      "true_positives": 0
+    },
+    "short_benign_statements": {
+      "benign_count": 6,
+      "count": 6,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "malicious_count": 0,
+      "mean_score": 5.366666666666667,
+      "predicted_benign": 6,
+      "recall": null,
+      "true_positives": 0
+    }
+  },
+  "test_count": 40,
+  "threshold": 0.5
+}
