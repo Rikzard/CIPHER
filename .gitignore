@@ -8,3 +8,5 @@ data/embeddings/*.faiss
 data/embeddings/*.faiss.json
 
 node_modules/
+
+data/classifier/external/hackaprompt.parquet
